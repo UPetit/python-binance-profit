@@ -1,6 +1,6 @@
-# Welcome to python-binance-orders GitHub repository!
+# Welcome to python-binance-profit GitHub repository!
 ## Notes
-The script allows you to place orders and combine some of them together in order to automate your strategy.
+The script allows you to place a buy order and automatically place an OCO order to secure your trade.
 It's using the binance API python wrapper from @sammchardy [python-binance](https://github.com/sammchardy/python-binance).
 ## Requirements
 - Create an API key after logging in to your Binance account https://www.binance.com/en/my/settings/api-management:
