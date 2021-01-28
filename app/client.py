@@ -97,7 +97,7 @@ class Client(BinanceClient):
     def _get_filters(
         self,
         symbol_filters: List[dict]
-    ) -> Dict:
+    ) -> Filters:
         """
         Get the filters
         Args:
@@ -419,7 +419,15 @@ class Client(BinanceClient):
 
         return buy_order, buy_quantity, buy_price
 
-    def execute_sell_strategy(self, symbol, sell_quantity, buy_price, profit, loss, price_round):
+    def execute_sell_strategy(
+        self,
+        symbol: Symbol,
+        sell_quantity: float,
+        buy_price: float,
+        profit: float,
+        loss: float,
+        price_round: int,
+    ) -> Union[Dict, Dict]:
         """ Execute the sell strategy
         Args:
             symbol (Symbol): Crypto pair
