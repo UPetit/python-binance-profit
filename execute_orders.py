@@ -5,7 +5,6 @@ import numpy as np
 from environs import Env
 
 from app.client import Client
-from app.entities import Symbol
 
 
 # Get Binance keys
@@ -18,7 +17,13 @@ if API_KEY is None or SECRET_KEY is None:
     sys.exit("Neither `API_KEY` nor `SECRET_KEY` environment variables are defined!")
 
 
-def main(symbol_name, quantity, price, profit, loss):
+def main(
+    symbol_name: str,
+    quantity: float,
+    price: str,
+    profit: float,
+    loss: float,
+) -> None:
 
     client = Client(api_key=API_KEY, api_secret=SECRET_KEY)
     symbol = client.get_symbol(symbol_name)
