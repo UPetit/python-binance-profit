@@ -23,12 +23,12 @@ pip install -r requirements.txt
 ---
 ## Use cases
 ### Run a Limit Buy order followed by an OCO Sell order
-## Script logic
+#### Script logic
 The script will check that both the price and the quantity are compliant with Binance rules for the selected symbol.
 If both are validated, the limit buy order will be sent to the market and the script will wait until it's filled.
 Once it's executed the OCO order will be prepared: the price with profit will be calculated according to the profit percentage that has been provided, same for the stoploss price.
 The OCO order will be sent to the market and the script will return the two related orders and then quit.
-## Instructions
+#### Instructions
 1. First, choose the crypto pair you want to trade. We call it the **symbol** (string).
 > Example: If you want to trade BTC with USDT, the symbol will be BTCUSDT (as long as this is an available symbol in Binance).
 2. Then you have to define how much of the base asset you want to buy. We call it the **quantity** (float).
