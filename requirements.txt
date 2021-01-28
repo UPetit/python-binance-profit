@@ -1,2 +1,4 @@
 python-binance==0.7.9
 numpy==1.19.5
+environs
+pydantic

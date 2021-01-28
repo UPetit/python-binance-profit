@@ -1,0 +1,15 @@
+DEFAULT_DECIMAL_PLACES = 2
+
+
+def get_formated_price(
+    amount: float,
+    precision: int = DEFAULT_DECIMAL_PLACES
+) -> str:
+    """ Format the price with a precision
+    Args:
+        amount (Float): Amount to format
+        precision (Integer): Precision to use
+    Return:
+        formated price (String)
+    """
+    return "{:0.0{}f}".format(amount, precision)
