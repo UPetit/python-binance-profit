@@ -49,7 +49,7 @@ class Client(BinanceClient):
             sys.exit("Binance API is down")
         print("Binance API is up")
 
-    def get_avg_price(self, symbol) -> Dict:
+    def get_avg_price(self, symbol: Symbol) -> Dict:
         """
         Get the API Response for the average price of the given symbol.
         Args:
@@ -59,7 +59,7 @@ class Client(BinanceClient):
         """
         return super().get_avg_price(symbol=symbol.symbol)
 
-    def get_symbol(self, symbol_name) -> Symbol:
+    def get_symbol(self, symbol_name: str) -> Symbol:
         """
         Set the information about a symbol
         Args:
