@@ -19,6 +19,14 @@ git clone https://github.com/UPetit/python-binance-profit.git
 ```
 pip install -r requirements.txt
 ```
+
+- Linux version without anaconda
+```bash
+# restrict lib install to the local venv
+python3 -m venv venv
+source ./venv/bin/activate
+pip install -r requirements.txt
+```
 ---
 ## Use cases
 ### Run a Limit Buy order followed by an OCO Sell order
