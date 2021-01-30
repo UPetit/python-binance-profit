@@ -42,9 +42,9 @@ The OCO order will be sent to the market and the script will return the two rela
 3. Then you have to define what is the price (for 1 unit of the base asset) you want to buy the quantity defined above. We call it the **price** (Decimal).
 > Example: if you trade the **symbol** BTCUSDT, you need to define the BTC (base asset) price in USDT (quote asset) you're willing to pay.
 4. Finally have to define your profit and stoploss percentages to exit the trade (this will be applied to the OCO sell order).
-We call them respectively **profit** (int)
-and **loss** (int).
-> If you want to make 2% of profit and put a stoploss a 1%, your profit should be 2 and the loss 1 (as integers between 0 and 100)
+We call them respectively **profit** (Decimal)
+and **loss** (Decimal).
+> If you want to make 2% of profit and put a stoploss a 1%, your profit should be 2 and the loss 1 (as Decimals between 0.0 and 100.0)
 
 ⚠️ Please not that if the quantity and/or price formats are not following Binance rules, your Limit buy order won't be validated and the script will stop before submitting to order to the market.
 > How to know the prices formats ? Go to the Binance market of your **symbol** you want to trade, check the current prices and quantities going through the market to know how many decimals you can use for both of them. For instance for BTCUSDT: the BTC quantity is using 6 decimals and the USDT price is using 2 decimals.

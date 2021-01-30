@@ -32,8 +32,8 @@ class Client(BinanceClient):
     ) -> None:
         """ Initialize the Binance client
         Args:
-            api_key (String): api key for binance api client
-            api_secret (String): api secret for binance api client
+            api_key (str): api key for binance api client
+            api_secret (str): api secret for binance api client
         Return:
             None
         """
@@ -56,7 +56,7 @@ class Client(BinanceClient):
         """
         Set the information about a symbol
         Args:
-            symbol_name (String): name of the symbol to retrieve
+            symbol_name (str): name of the symbol to retrieve
         Return:
             Symbol
         """
@@ -99,12 +99,12 @@ class Client(BinanceClient):
 
     def _get_filters(
         self,
-        symbol_filters: List[dict]
+        symbol_filters: List[Dict]
     ) -> Filters:
         """
         Get the filters
         Args:
-            symbol_filters (List of dict): list of filters as dicts
+            symbol_filters (List of Dict): list of filters as dicts
             for a given symbol
         Return:
             Filters
@@ -145,15 +145,13 @@ class Client(BinanceClient):
         self,
         symbol: Symbol,
         quote_quantity: Decimal,
-        qty_round: int
     ) -> bool:
         """
         Validate the quote quantity against the Market Lot Size filter:
         https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#filters
         Args:
             symbol (Symbol): Crypto pair
-            quote_quantity (Float): Quantity to spend/receive in quote asset
-            qty_round (Integer): Precision for quantity
+            quote_quantity (Decimal): Quantity to spend/receive in quote asset
         Return
             Bool
         """
@@ -185,8 +183,7 @@ class Client(BinanceClient):
         https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#filters
         Args:
             symbol (Symbol): Crypto pair
-            quantity (Float): Quantity to buy/sell in base asset
-            qty_round (Integer): Precision for quantity
+            quantity (Decimal): Quantity to buy/sell in base asset
         Return
             Bool
         """
@@ -216,9 +213,7 @@ class Client(BinanceClient):
         https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#filters
         Args:
             symbol (Symbol): Crypto pair
-            avg_price_quote (String): Avg Price (quote asset)
-            price (String): Price to spend/received for a base asset
-            price_round (Integer): Precision for price
+            price (Decimal): Price to spend/received for a base asset
         Return
             Bool
         """
@@ -249,12 +244,12 @@ class Client(BinanceClient):
     def create_market_buy_order(
         self,
         symbol: Symbol,
-        total_quote: float
-    ) -> Union[dict, int]:
+        total_quote: Decimal
+    ) -> Union[Dict, int]:
         """ Place a market buy order
         Args:
             symbol (Symbol): Crypto pair
-            total_quote (Float): Quote total price to pay
+            total_quote (Decimal): Quote total price to pay
         Return
             Dict, Integer
         """
@@ -276,21 +271,21 @@ class Client(BinanceClient):
     def create_limit_buy_order(
         self,
         symbol: Symbol,
-        base_quantity: float,
+        base_asset_quantity_to_buy: Decimal,
         quote_unit_price: str,
-    ) -> Union[dict, int]:
+    ) -> Union[Dict, int]:
         """ Place a limit buy order
         Args:
             symbol (Symbol): Crypto pair
-            base_quantity (Float): Base asset quantity to buy
-            quote_unit_price (String): Quote asset unit price
+            base_quantity (Decimal): Base asset quantity to buy
+            quote_unit_price (str): Quote asset unit price
         Return
             Dict, Integer
         """
         try:
             buy_order = self.order_limit_buy(
                 symbol=symbol.symbol,
-                quantity=base_quantity,
+                quantity=base_asset_quantity_to_buy,
                 price=quote_unit_price,
             )
             buy_order_id = buy_order["orderId"]
@@ -306,17 +301,17 @@ class Client(BinanceClient):
     def create_sell_oco_order(
         self,
         symbol: Symbol,
-        base_quantity: Decimal,
-        price_profit: str,
-        price_loss: str,
-    ) -> dict:
+        base_asset_quantity_to_sell: Decimal,
+        sell_price_profit: str,
+        sell_price_stop_loss: str,
+    ) -> Dict:
         """
         Place a Sell OCO order
         Args:
             symbol (Symbol): Crypto pair
-            base_quantity (Float): Base asset quantity to buy
-            price_profit (String): Price to sell
-            price_loss (String): Stoploss price to sell
+            base_asset_quantity_to_sell (Decimal): Base asset quantity to buy
+            sell_price_profit (str): Price to sell
+            sell_price_stop_loss (str): Stoploss price to sell
         Return:
             Dict
         """
@@ -324,10 +319,10 @@ class Client(BinanceClient):
             sell_order = self.create_oco_order(
                 symbol=symbol.symbol,
                 side=SIDE_SELL,
-                quantity=base_quantity,
-                price=price_profit,
-                stopPrice=price_loss,
-                stopLimitPrice=price_loss,
+                quantity=base_asset_quantity_to_sell,
+                price=sell_price_profit,
+                stopPrice=sell_price_stop_loss,
+                stopLimitPrice=sell_price_stop_loss,
                 stopLimitTimeInForce=TIME_IN_FORCE_GTC
             )
             print("-> The sell oco order has been sent")
@@ -342,26 +337,25 @@ class Client(BinanceClient):
     def execute_buy_strategy(
         self,
         symbol: Symbol,
-        buy_order_type: str,
+        order_type: str,
         quantity: Decimal,
         unit_price: Decimal,
-    ):
-        """ Execute the buy strategy
+    ) -> Union[Dict, Decimal, Decimal]:
+        """
+        Execute the buy strategy
         Args:
             symbol (Symbol): Crypto pair
-            buy_order_type (String): Type of the buying order
-            avg_price (Dict): Avg price for this symbol
-            quantity (Float): Quantity to buy
-            unit_price (String): Unit price to spend
-            qty_round (Integer): Precision for quantity
-            price_round (Integer): Precision for price
+            order_type (str): type of buy order (options: "limit", )
+            quantity (Decimal): quantity to buy
+            unit_price (Decimal): unitary buy price
         Return:
-            Dict, Float, Float
+            Dict, Decimal, Decimal
         """
+
         print("============================")
         print("Step 1 - Buy order execution")
 
-        if buy_order_type == "limit":
+        if order_type == "limit":
             print("Order validation in progress...")
             if not self.validate_qty(symbol, quantity):
                 sys.exit("The order qty is not valid.")
@@ -407,18 +401,16 @@ class Client(BinanceClient):
         symbol: Symbol,
         sell_quantity: Decimal,
         buy_price: Decimal,
-        profit: int,
-        loss: int,
+        profit: Decimal,
+        loss: Decimal,
     ) -> Union[Dict, Dict]:
         """ Execute the sell strategy
         Args:
             symbol (Symbol): Crypto pair
-            client (binance.client.Client): Binance client
-            sell_quantity (Float): Quantity to sell (that has been bought previously)
-            buy_price (Float): Total price spent for the previous buy order
-            profit (Float): Percentage of the profit
-            loss (Float): Percentage of the stoploss
-            price_round (Integer): Precision of the price
+            sell_quantity (Decimal): Quantity to sell (that has been bought previously)
+            buy_price (Decimal): Total price spent for the previous buy order
+            profit (Decimal): Percentage of the profit
+            loss (Decimal): Percentage of the stoploss
         Return:
             Dict, Dict
         """
@@ -427,7 +419,7 @@ class Client(BinanceClient):
         print("Step 2 - Sell OCO order execution")
 
         # Calculate the selling price with profit
-        price_profit = buy_price * (100 + profit)
+        price_profit = buy_price * (100 + profit)/100
         print('debug', price_profit)
         price_profit_str = get_formated_price(
             price_profit,
@@ -435,7 +427,7 @@ class Client(BinanceClient):
         )
         print(f"Selling price (profit): {price_profit_str}")
         # Calculate the stoploss price
-        price_loss = buy_price * (100 - loss)
+        price_loss = buy_price * (100 - loss)/100
         price_loss_str = get_formated_price(
             price_loss,
             symbol.price_decimal_precision
