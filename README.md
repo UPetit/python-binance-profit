@@ -38,11 +38,13 @@ The OCO order will be sent to the market and the script will return the two rela
 #### Instructions
 1. First, choose the crypto pair you want to trade. We call it the **symbol** (string).
 > Example: If you want to trade BTC with USDT, the symbol will be BTCUSDT (as long as this is an available symbol in Binance).
-2. Then you have to define how much of the base asset you want to buy. We call it the **quantity** (float).
-3. Then you have to define what is the price (for 1 unit of the base asset) you want to buy the quantity defined above. We call it the **price** (float).
+2. Then you have to define how much of the base asset you want to buy. We call it the **quantity** (Decimal).
+3. Then you have to define what is the price (for 1 unit of the base asset) you want to buy the quantity defined above. We call it the **price** (Decimal).
 > Example: if you trade the **symbol** BTCUSDT, you need to define the BTC (base asset) price in USDT (quote asset) you're willing to pay.
-4. Finally have to define your profit and stoploss percentages to exit the trade (this will be applied to the OCO sell order). We call them respectively **profit** (float) and **loss** (float).
-> If you want to make 2% of profit and put a stoploss a 1%, your profit should be 0.02 and the loss 0.01 (in decimals between 0.00 and 1.00)
+4. Finally have to define your profit and stoploss percentages to exit the trade (this will be applied to the OCO sell order).
+We call them respectively **profit** (int)
+and **loss** (int).
+> If you want to make 2% of profit and put a stoploss a 1%, your profit should be 2 and the loss 1 (as integers between 0 and 100)
 
 ⚠️ Please not that if the quantity and/or price formats are not following Binance rules, your Limit buy order won't be validated and the script will stop before submitting to order to the market.
 > How to know the prices formats ? Go to the Binance market of your **symbol** you want to trade, check the current prices and quantities going through the market to know how many decimals you can use for both of them. For instance for BTCUSDT: the BTC quantity is using 6 decimals and the USDT price is using 2 decimals.
@@ -53,7 +55,7 @@ python execute_orders.py --symbol YOUR_SYMBOL --quantity YOUR_QUANTITY --price Y
 ```
 *Example: If you want to trade BTC against USDT, buy 0.251897 BTC at 31488.69 USDT (per BTC) and then you want to sell it to make a 4% profit and a potential loss of 1%, you'll execute the script like this:*
 ```
-python execute_orders.py --symbol BTCUSDT --quantity 0.251897 --price 31488.69 --profit 0.04 --loss 0.01
+python execute_orders.py --symbol BTCUSDT --quantity 0.251897 --price 31488.69 --profit 4 --loss 1
 ```
 
 Enjoy!

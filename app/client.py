@@ -1,7 +1,10 @@
 from typing import Union, List, Dict
 from datetime import datetime
+from decimal import Decimal
 import sys
 import time
+
+import numpy as np
 
 from binance.client import Client as BinanceClient
 from binance.exceptions import BinanceAPIException
@@ -49,16 +52,6 @@ class Client(BinanceClient):
             sys.exit("Binance API is down")
         print("Binance API is up")
 
-    def get_avg_price(self, symbol: Symbol) -> Dict:
-        """
-        Get the API Response for the average price of the given symbol.
-        Args:
-            symbol (Symbol): Crypto pair
-        Return:
-            Dict
-        """
-        return super().get_avg_price(symbol=symbol.symbol)
-
     def get_symbol(self, symbol_name: str) -> Symbol:
         """
         Set the information about a symbol
@@ -72,6 +65,13 @@ class Client(BinanceClient):
             sys.exit(f"No info found for the symbol {symbol_name}")
 
         filters = self._get_filters(symbol_info["filters"])
+
+        avg_price = Decimal(
+            super().get_avg_price(symbol=symbol_name)['price']
+        )
+        price_round = int(-np.log10(filters.price_filter.min_price))
+        qty_round = int(-np.log10(filters.lot_size_filter.min_qty))
+
         symbol = Symbol(
             symbol=symbol_info['symbol'],
             status=symbol_info['status'],
@@ -79,6 +79,9 @@ class Client(BinanceClient):
             quoteAsset=symbol_info['quoteAsset'],
             isSpotTradingAllowed=symbol_info['isSpotTradingAllowed'],
             ocoAllowed=symbol_info['isSpotTradingAllowed'],
+            price_decimal_precision=price_round,
+            qty_decimal_precision=qty_round,
+            average_price=avg_price,
             filters=filters
         )
         if (
@@ -108,27 +111,27 @@ class Client(BinanceClient):
         """
 
         price_filter = PriceFilter(
-            min_price=float(symbol_filters[0]["minPrice"]),
-            max_price=float(symbol_filters[0]["maxPrice"]),
-            tick_size=float(symbol_filters[0]["tickSize"]),
+            min_price=symbol_filters[0]["minPrice"],
+            max_price=symbol_filters[0]["maxPrice"],
+            tick_size=symbol_filters[0]["tickSize"],
         )
 
         percent_price_filter = PercentPriceFilter(
-            mul_up=float(symbol_filters[1]["multiplierUp"]),
-            mul_down=float(symbol_filters[1]["multiplierDown"]),
-            avg_price_mins=float(symbol_filters[1]["avgPriceMins"])
+            mul_up=symbol_filters[1]["multiplierUp"],
+            mul_down=symbol_filters[1]["multiplierDown"],
+            avg_price_mins=symbol_filters[1]["avgPriceMins"]
         )
 
         lot_size_filter = LotSizeFilter(
-            min_qty=float(symbol_filters[2]["minQty"]),
-            max_qty=float(symbol_filters[2]["maxQty"]),
-            step_size=float(symbol_filters[2]["stepSize"])
+            min_qty=symbol_filters[2]["minQty"],
+            max_qty=symbol_filters[2]["maxQty"],
+            step_size=symbol_filters[2]["stepSize"]
         )
 
         market_lot_size_filter = MarketLotSizeFilter(
-            min_qty=float(symbol_filters[5]["minQty"]),
-            max_qty=float(symbol_filters[5]["maxQty"]),
-            step_size=float(symbol_filters[5]["stepSize"])
+            min_qty=symbol_filters[5]["minQty"],
+            max_qty=symbol_filters[5]["maxQty"],
+            step_size=symbol_filters[5]["stepSize"]
         )
 
         return Filters(
@@ -141,10 +144,11 @@ class Client(BinanceClient):
     def validate_quote_qty(
         self,
         symbol: Symbol,
-        quote_quantity: float,
+        quote_quantity: Decimal,
         qty_round: int
     ) -> bool:
-        """ Validate the quote quantity against the Market Lot Size filter:
+        """
+        Validate the quote quantity against the Market Lot Size filter:
         https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#filters
         Args:
             symbol (Symbol): Crypto pair
@@ -161,7 +165,7 @@ class Client(BinanceClient):
             return False
 
         if market_lot_size_filter.step_size:
-            if round(quote_quantity, qty_round) != quote_quantity:
+            if (round(quote_quantity, symbol.qty_decimal_precision) != quote_quantity):
                 return False
 
         if not isinstance(quote_quantity, float):
@@ -174,8 +178,7 @@ class Client(BinanceClient):
     def validate_qty(
         self,
         symbol: Symbol,
-        quantity: float,
-        qty_round: int
+        quantity: Decimal
     ) -> bool:
         """
         Validate the base quantity for against the Lot Size filter:
@@ -196,11 +199,8 @@ class Client(BinanceClient):
             return False
 
         if lot_size_filter.step_size:
-            if round(quantity, qty_round) != quantity:
+            if round(quantity, symbol.qty_decimal_precision) != quantity:
                 return False
-
-        if not isinstance(quantity, float):
-            return False
 
         print("Quantity (limit order) is validated")
         print("Quantity:", quantity)
@@ -209,9 +209,7 @@ class Client(BinanceClient):
     def validate_price(
         self,
         symbol: Symbol,
-        avg_price_quote: str,
-        price: str,
-        price_round: int,
+        price: Decimal,
     ) -> bool:
         """
         Validate the price for against the Price and Percent filters:
@@ -228,23 +226,20 @@ class Client(BinanceClient):
         price_filter = symbol.filters.price_filter
         percent_price_filter = symbol.filters.percent_price_filter
 
-        if float(price) < price_filter.min_price:
+        if price < price_filter.min_price:
             return False
 
-        if float(price) > price_filter.max_price:
+        if price > price_filter.max_price:
             return False
 
         if price_filter.tick_size:
-            if round(float(price), price_round) != float(price):
+            if round(price, symbol.price_decimal_precision) != price:
                 return False
 
-        if float(price) > float(avg_price_quote) * percent_price_filter.mul_up:
+        if price > symbol.average_price * percent_price_filter.mul_up:
             return False
 
-        if float(price) < float(avg_price_quote) * percent_price_filter.mul_down:
-            return False
-
-        if not isinstance(price, str):
+        if price < symbol.average_price * percent_price_filter.mul_down:
             return False
 
         print("Price is validated")
@@ -311,7 +306,7 @@ class Client(BinanceClient):
     def create_sell_oco_order(
         self,
         symbol: Symbol,
-        base_quantity: float,
+        base_quantity: Decimal,
         price_profit: str,
         price_loss: str,
     ) -> dict:
@@ -330,9 +325,9 @@ class Client(BinanceClient):
                 symbol=symbol.symbol,
                 side=SIDE_SELL,
                 quantity=base_quantity,
-                price=price_profit,
-                stopPrice=price_loss,
-                stopLimitPrice=price_loss,
+                price=str(price_profit),
+                stopPrice=str(price_loss),
+                stopLimitPrice=str(price_loss),
                 stopLimitTimeInForce=TIME_IN_FORCE_GTC
             )
             print("-> The sell oco order has been sent")
@@ -348,11 +343,8 @@ class Client(BinanceClient):
         self,
         symbol: Symbol,
         buy_order_type: str,
-        avg_price: dict,
-        quantity: float,
-        unit_price: str,
-        qty_round: int,
-        price_round: int,
+        quantity: Decimal,
+        unit_price: Decimal,
     ):
         """ Execute the buy strategy
         Args:
@@ -371,31 +363,22 @@ class Client(BinanceClient):
 
         if buy_order_type == "limit":
             print("Order validation in progress...")
-            is_qty_valid = self.validate_qty(
-                symbol,
-                quantity,
-                qty_round
-            )
-            is_price_valid = self.validate_price(
-                symbol,
-                avg_price["price"],
-                unit_price,
-                price_round
-            )
+            if not self.validate_qty(symbol, quantity):
+                sys.exit("The order qty is not valid.")
 
-            if not is_qty_valid or not is_price_valid:
-                sys.exit("The order is not valid.")
+            if not self.validate_price(symbol, unit_price):
+                sys.exit("The order price is not valid.")
+
             buy_order, buy_order_id = self.create_limit_buy_order(
                 symbol,
                 quantity,
                 unit_price
             )
+
+            if not buy_order_id:
+                sys.exit("Buy order has not been created")
         else:
             sys.exit("Order type not supported yet.")
-
-        # Check if the order has been created
-        if not buy_order_id:
-            sys.exit("Buy order has not been created")
 
         # Wait for few seconds (API may not find the order_id instantly after the executing)
         time.sleep(2)
@@ -414,19 +397,18 @@ class Client(BinanceClient):
                 print("The order is not filled yet...")
                 time.sleep(3)
 
-        buy_price = float(buy_order["price"])
-        buy_quantity = float(buy_order["executedQty"])
+        buy_price = Decimal(buy_order["price"])
+        buy_quantity = Decimal(buy_order["executedQty"])
 
         return buy_order, buy_quantity, buy_price
 
     def execute_sell_strategy(
         self,
         symbol: Symbol,
-        sell_quantity: float,
-        buy_price: float,
-        profit: float,
-        loss: float,
-        price_round: int,
+        sell_quantity: Decimal,
+        buy_price: Decimal,
+        profit: int,
+        loss: int,
     ) -> Union[Dict, Dict]:
         """ Execute the sell strategy
         Args:
@@ -445,12 +427,19 @@ class Client(BinanceClient):
         print("Step 2 - Sell OCO order execution")
 
         # Calculate the selling price with profit
-        price_profit = buy_price * (1 + profit)
-        price_profit_str = get_formated_price(price_profit, price_round)
+        price_profit = buy_price * (100 + profit)
+        print('debug', price_profit)
+        price_profit_str = get_formated_price(
+            price_profit,
+            symbol.price_decimal_precision
+        )
         print(f"Selling price (profit): {price_profit_str}")
         # Calculate the stoploss price
-        price_loss = buy_price * (1 - loss)
-        price_loss_str = get_formated_price(price_loss, price_round)
+        price_loss = buy_price * (100 - loss)
+        price_loss_str = get_formated_price(
+            price_loss,
+            symbol.price_decimal_precision
+        )
         print(f"Stoploss price: {price_loss_str}")
 
         sell_order = self.create_sell_oco_order(
