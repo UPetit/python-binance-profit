@@ -1,8 +1,10 @@
+from decimal import Decimal
+
 DEFAULT_DECIMAL_PLACES = 2
 
 
 def get_formated_price(
-    amount: float,
+    amount: Decimal,
     precision: int = DEFAULT_DECIMAL_PLACES
 ) -> str:
     """ Format the price with a precision
