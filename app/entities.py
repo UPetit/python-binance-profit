@@ -48,12 +48,8 @@ class InputArgs(BaseModel):
     symbol: str
     quantity: condecimal(gt=0)
     price: condecimal(gt=0)
-    profit: int = Field(..., gt=0, le=100)
-    loss: int = Field(..., gt=0, le=100)
-
-    @validator('loss', 'profit', pre=True)
-    def strict_int_pre_validate(cls, v):
-        return _strict_int(cls, v)
+    profit: condecimal(gt=0, le=100)
+    loss: condecimal(gt=0, le=100)
 
 
 def _strict_int(cls, v):
