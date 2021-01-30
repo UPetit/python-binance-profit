@@ -325,9 +325,9 @@ class Client(BinanceClient):
                 symbol=symbol.symbol,
                 side=SIDE_SELL,
                 quantity=base_quantity,
-                price=str(price_profit),
-                stopPrice=str(price_loss),
-                stopLimitPrice=str(price_loss),
+                price=price_profit,
+                stopPrice=price_loss,
+                stopLimitPrice=price_loss,
                 stopLimitTimeInForce=TIME_IN_FORCE_GTC
             )
             print("-> The sell oco order has been sent")
