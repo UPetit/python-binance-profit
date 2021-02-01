@@ -1,5 +1,6 @@
 import sys
 import argparse
+from decimal import Decimal
 
 from environs import Env
 from pydantic import ValidationError, BaseModel
@@ -35,13 +36,13 @@ def main(
         input_args.price,
     )
 
-    print(f"=> Buy price: {buy_price} {symbol.quote_asset}")
+    print(f"=> Buy price: {buy_price} {symbol.quoteAsset}")
     print(
         "=> Total price: "
         f"{Decimal(buy_order['cummulativeQuoteQty'], symbol.price_decimal_precision)} "
-        f"{symbol.quote_asset}"
+        f"{symbol.quoteAsset}"
     )
-    print(f"=> Buy quantity: {buy_quantity} {symbol.base_asset}")
+    print(f"=> Buy quantity: {buy_quantity} {symbol.baseAsset}")
 
     stop_loss_limit_order, limit_maker_order = client.execute_sell_strategy(
         symbol,
