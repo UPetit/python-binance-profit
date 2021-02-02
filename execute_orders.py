@@ -7,6 +7,7 @@ from pydantic import ValidationError, BaseModel
 
 from app.client import Client
 from app.entities import InputArgs
+from app.tools import get_formated_price
 
 
 # Get Binance keys
@@ -36,13 +37,17 @@ def main(
         input_args.price,
     )
 
-    print(f"=> Buy price: {buy_price} {symbol.quoteAsset}")
+    print(f"=> Buy price: {get_formated_price(buy_price, symbol.price_decimal_precision)} "
+        f"{symbol.quoteAsset}"
+    )
     print(
         "=> Total price: "
         f"{round(Decimal(buy_order['cummulativeQuoteQty']), symbol.price_decimal_precision)} "
         f"{symbol.quoteAsset}"
     )
-    print(f"=> Buy quantity: {buy_quantity} {symbol.baseAsset}")
+    print(f"=> Buy quantity: {get_formated_price(buy_quantity, symbol.qty_decimal_precision)} "
+        f"{symbol.baseAsset}"
+    )
 
     stop_loss_limit_order, limit_maker_order = client.execute_sell_strategy(
         symbol,
