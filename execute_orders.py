@@ -36,7 +36,8 @@ def main(
         input_args.quantity,
         input_args.price,
     )
-
+    print("=========================")
+    print("=== Buy order summary ===")
     print(f"=> Buy price: {get_formated_price(buy_price, symbol.price_decimal_precision)} "
         f"{symbol.quoteAsset}"
     )
@@ -56,7 +57,9 @@ def main(
         input_args.profit,
         input_args.loss,
     )
-    print("=> OCO order summary:")
+    
+    print("=========================")
+    print("=== OCO order summary ===")
     print("Stop loss limit order:", stop_loss_limit_order)
     print("Limit maker order:", limit_maker_order)
 
