@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 import sys
 import time
-from errno import ECONNRESET
+from requests.exceptions import ConnectionError
 
 import numpy as np
 
@@ -412,7 +412,7 @@ class Client(BinanceClient):
                         symbol=symbol.symbol,
                         orderId=buy_order_id
                     )
-                except (BinanceAPIException, ECONNRESET) as e:
+                except (BinanceAPIException, ConnectionError) as e:
                     print("Connection failed. Retry...")
                     time.sleep(1)
                     continue
