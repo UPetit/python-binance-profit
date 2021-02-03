@@ -1,10 +1,13 @@
 import sys
 import argparse
+from decimal import Decimal
 
-import numpy as np
 from environs import Env
+from pydantic import ValidationError, BaseModel
 
 from app.client import Client
+from app.entities import InputArgs
+from app.tools import get_formated_price
 
 
 # Get Binance keys
@@ -18,55 +21,57 @@ if API_KEY is None or SECRET_KEY is None:
 
 
 def main(
-    symbol_name: str,
-    quantity: float,
-    price: str,
-    profit: float,
-    loss: float,
+    input_args: InputArgs
 ) -> None:
 
     client = Client(api_key=API_KEY, api_secret=SECRET_KEY)
-    symbol = client.get_symbol(symbol_name)
+    symbol = client.get_symbol(input_args.symbol)
 
     buy_order_type = "limit"
-
-    # To be used to check the Percent Filter rule
-    avg_price = client.get_avg_price(symbol)
-
-    # Get the precisions for both price and quantity
-    price_round = int(-np.log10(symbol.filters.price_filter.min_price))
-    # print("Min price decimal:", price_round)
-    qty_round = int(-np.log10(symbol.filters.lot_size_filter.min_qty))
-    # print("Min quantity decimal:", qty_round)
 
     # Place a market buy order
     buy_order, buy_quantity, buy_price = client.execute_buy_strategy(
         symbol,
         buy_order_type,
-        avg_price,
-        quantity,
-        price,
-        qty_round,
-        price_round
+        input_args.quantity,
+        input_args.price,
     )
 
-    print(f"=> Buy price: {buy_price} {symbol.quote_asset}")
-    print(
-        f"=> Total price: {round(float(buy_order['cummulativeQuoteQty']), price_round)} "
-        f"{symbol.quote_asset}"
+    print(f"=> Buy price: {get_formated_price(buy_price, symbol.price_decimal_precision)} "
+        f"{symbol.quoteAsset}"
     )
-    print(f"=> Buy quantity: {buy_quantity} {symbol.base_asset}")
+    print(
+        "=> Total price: "
+        f"{round(Decimal(buy_order['cummulativeQuoteQty']), symbol.price_decimal_precision)} "
+        f"{symbol.quoteAsset}"
+    )
+    print(f"=> Buy quantity: {get_formated_price(buy_quantity, symbol.qty_decimal_precision)} "
+        f"{symbol.baseAsset}"
+    )
 
     stop_loss_limit_order, limit_maker_order = client.execute_sell_strategy(
+        symbol,
         buy_quantity,
         buy_price,
-        profit,
-        loss,
-        price_round
+        input_args.profit,
+        input_args.loss,
     )
     print("=> OCO order summary:")
     print("Stop loss limit order:", stop_loss_limit_order)
     print("Limit maker order:", limit_maker_order)
+
+
+def input_validation(
+    raw_input_args,
+    input_validator: BaseModel = InputArgs
+) -> BaseModel:
+
+    try:
+        input_args_validated = InputArgs(**args)
+    except ValidationError as e:
+        sys.exit(e)
+    else:
+        return input_args_validated
 
 
 if __name__ == "__main__":
@@ -74,46 +79,33 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--symbol",
-        type=str,
         required=True,
         help="define the symbol of the crypto pair to trade"
     )
     parser.add_argument(
         "--quantity",
-        type=float,
         required=True,
-        help="define the quantity to buy"
+        help="define the quantity to buy (decimal number)"
     )
     parser.add_argument(
         "--price",
-        type=float,
         required=True,
         help="define the unit price to spend"
     )
     parser.add_argument(
         "--profit",
-        type=float,
         required=True,
-        help="define the profit to make in percentage between 0.0 and 1.0"
+        help="define the profit to make in percentage between 0 and 100"
     )
     parser.add_argument(
         "--loss",
-        type=float,
         required=True,
-        help="define the stoploss in percentage between 0.0 and 1.0"
+        help="define the stoploss in percentage between 0 and 100"
     )
-    args = parser.parse_args()
 
-    if not (
-        0.0 < args.profit <= 1.0
-        and 0.0 < args.loss <= 1.0
-    ):
-        sys.exit("The profit and the loss should be between 0.0 and 1.0")
+    args = vars(parser.parse_args())
+    input_args_validated = input_validation(args)
 
     main(
-        str(args.symbol),
-        float(args.quantity),
-        str(args.price),
-        float(args.profit),
-        float(args.loss)
+        input_args=input_args_validated
     )
