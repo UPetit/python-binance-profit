@@ -2,6 +2,8 @@
 ## Notes
 The script allows you to place a buy order and automatically place an [OCO order](https://www.investopedia.com/terms/o/oco.asp) to secure (and exit) your trade.
 It's using the binance API python wrapper from @sammchardy [python-binance](https://github.com/sammchardy/python-binance)
+## Disclaimer
+Even if the scripts are easy to understand, errors exists that why the Issues section is important to report any bug that you may find. I recommend to use the [latest release](https://github.com/UPetit/python-binance-profit/releases/latest) because it has been tested multiple times compared to the other branches.
 ## Requirements
 - Create an API key after logging in to your Binance account https://www.binance.com/en/my/settings/api-management:
   - Check both `Enable Reading` and `Enable Spot & Margin Trading`
