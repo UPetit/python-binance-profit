@@ -3,6 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 import sys
 import time
+from errno import ECONNRESET
 
 import numpy as np
 
@@ -334,6 +335,32 @@ class Client(BinanceClient):
         else:
             return sell_order
 
+    def cancel_open_order(
+        self,
+        symbol: Symbol,
+        order_id: str
+    ) -> Dict:
+        """
+        Cancel an open order
+        Args:
+            symbol (Symbol): Crypto pair
+            order_id (str): Open order id
+        Return
+            Dict
+        """
+        try:
+            cancel_result = client.cancel_order(
+                symbol=symbol.symbol,
+                orderId=order_id
+            )
+        
+        except BinanceAPIException as e:
+            print(f"(Code {e.status_code}) {e.message}")
+            return {}
+
+        else:
+            return cancel_result
+
     def execute_buy_strategy(
         self,
         symbol: Symbol,
@@ -352,8 +379,7 @@ class Client(BinanceClient):
             Dict, Decimal, Decimal
         """
 
-        print("============================")
-        print("Step 1 - Buy order execution")
+        print("=> Step 1 - Buy order execution")
 
         if order_type == "limit":
             print("Order validation in progress...")
@@ -379,14 +405,36 @@ class Client(BinanceClient):
 
         ORDER_IS_NOT_FILLED_YET = True
         while ORDER_IS_NOT_FILLED_YET:
-            _order = self.get_order(
-                symbol=symbol.symbol,
-                orderId=buy_order_id
-            )
+            # Iterate few times if the Binance API is not responding
+            for retry_number in range(3):
+                try:
+                    _order = self.get_order(
+                        symbol=symbol.symbol,
+                        orderId=buy_order_id
+                    )
+                except (BinanceAPIException, ECONNRESET) as e:
+                    print("Connection failed. Retry...")
+                    time.sleep(1)
+                    continue
+                else:
+                    break
+            else:
+                print("Binance API is not responding, attempting to cancel the buy order...")
+                # Cancel order
+                _cancel_result = self.cancel_open_order(
+                        symbol=symbol.symbol,
+                        order_id=buy_order_id
+                )
+                print("Buy order canceled: ", _cancel_result)
+                sys.exit(1)
+
             if _order["status"] == "FILLED":
                 buy_order = _order
                 print("The buy order has been filled!")
                 break
+            elif _order["status"] == "CANCELED":
+                print("The buy order has been canceled (not by the script)!")
+                sys.exit(1)
             else:
                 print("The order is not filled yet...")
                 time.sleep(3)
@@ -415,12 +463,10 @@ class Client(BinanceClient):
             Dict, Dict
         """
         # Place a sell OCO order
-        print("============================")
-        print("Step 2 - Sell OCO order execution")
+        print("=> Step 2 - Sell OCO order execution")
 
         # Calculate the selling price with profit
         price_profit = buy_price * (100 + profit)/100
-        print('debug', price_profit)
         price_profit_str = get_formated_price(
             price_profit,
             symbol.price_decimal_precision
