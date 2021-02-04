@@ -22,17 +22,11 @@ class PriceFilter(ObjectValue):
     max_price: Decimal
     tick_size: Decimal
 
-    class Config:
-        allow_mutation = False
-
 
 class PercentPriceFilter(ObjectValue):
     mul_up: Decimal
     mul_down: Decimal
     avg_price_mins: Decimal
-
-    class Config:
-        allow_mutation = False
 
 
 class LotSizeFilter(ObjectValue):

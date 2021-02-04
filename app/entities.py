@@ -13,6 +13,7 @@ from .tools import _strict_int_validator
 class Entity(BaseModel):
     class Config:
         allow_mutation = True
+        validate_assignment = True
 
 
 class Filters(Entity):
