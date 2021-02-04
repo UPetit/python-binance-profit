@@ -6,7 +6,7 @@ from environs import Env
 from pydantic import ValidationError, BaseModel
 
 from app.client import Client
-from app.entities import InputArgs
+from app.object_values import InputArgs
 from app.tools import get_formated_price
 
 
@@ -38,7 +38,8 @@ def main(
     )
     print("=========================")
     print("=== Buy order summary ===")
-    print(f"=> Buy price: {get_formated_price(buy_price, symbol.price_decimal_precision)} "
+    print(
+        f"=> Buy price: {get_formated_price(buy_price, symbol.price_decimal_precision)} "
         f"{symbol.quoteAsset}"
     )
     print(
@@ -46,7 +47,8 @@ def main(
         f"{round(Decimal(buy_order['cummulativeQuoteQty']), symbol.price_decimal_precision)} "
         f"{symbol.quoteAsset}"
     )
-    print(f"=> Buy quantity: {get_formated_price(buy_quantity, symbol.qty_decimal_precision)} "
+    print(
+        f"=> Buy quantity: {get_formated_price(buy_quantity, symbol.qty_decimal_precision)} "
         f"{symbol.baseAsset}"
     )
 
@@ -57,7 +59,7 @@ def main(
         input_args.profit,
         input_args.loss,
     )
-    
+
     print("=========================")
     print("=== OCO order summary ===")
     print("Stop loss limit order:", stop_loss_limit_order)
