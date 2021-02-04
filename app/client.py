@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 import sys
 import time
-from requests.exceptions import ConnectionError
+from BaseException.Exception.OSError import ConnectionError
 
 import numpy as np
 
