@@ -405,14 +405,14 @@ class Client(BinanceClient):
         ORDER_IS_NOT_FILLED_YET = True
         while ORDER_IS_NOT_FILLED_YET:
             # Iterate few times if the Binance API is not responding
-            for retry_number in range(3):
+            for retry_number in range(10):
                 try:
                     _order = self.get_order(
                         symbol=symbol.symbol,
                         orderId=buy_order_id
                     )
                 except (BinanceAPIException, ConnectionError) as e:
-                    print("Connection failed. Retry...", e)
+                    print(f"({str(retry_number+1)}) Connection failed. Retry...", e)
                     time.sleep(2)
                     continue
                 else:
