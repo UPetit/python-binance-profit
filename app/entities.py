@@ -1,6 +1,5 @@
-from pydantic import BaseModel, condecimal, Field, validator, PositiveInt
+from pydantic import BaseModel, condecimal, Field, validator
 from decimal import Decimal
-
 
 class PriceFilter(BaseModel):
     min_price: Decimal
@@ -38,10 +37,14 @@ class Symbol(BaseModel):
     quoteAsset: str
     isSpotTradingAllowed: bool
     ocoAllowed: bool
-    price_decimal_precision: PositiveInt
-    qty_decimal_precision: int
+    price_decimal_precision: int = Field(..., ge=0)
+    qty_decimal_precision: int = Field(..., ge=0)
     average_price: Decimal
     filters: Filters
+
+    @validator('price_decimal_precision', 'qty_decimal_precision')
+    def enforce_strict_integer_validation(cls, v):
+        return _strict_int_validator(cls, v)
 
 
 class InputArgs(BaseModel):
@@ -52,7 +55,7 @@ class InputArgs(BaseModel):
     loss: condecimal(gt=0, le=100)
 
 
-def _strict_int(cls, v):
+def _strict_int_validator(cls, v):
     if Decimal(v) != int(v):
         raise ValueError
     return v

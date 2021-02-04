@@ -402,17 +402,18 @@ class Client(BinanceClient):
         # Wait for few seconds (API may not find the order_id instantly after the executing)
         time.sleep(3)
 
+        NB_MAX_ATTEMPTS = 10
         ORDER_IS_NOT_FILLED_YET = True
         while ORDER_IS_NOT_FILLED_YET:
             # Iterate few times if the Binance API is not responding
-            for retry_number in range(10):
+            for retry_number in range(NB_MAX_ATTEMPTS):
                 try:
                     _order = self.get_order(
                         symbol=symbol.symbol,
                         orderId=buy_order_id
                     )
                 except (BinanceAPIException, ConnectionError) as e:
-                    print(f"({str(retry_number+1)}) Connection failed. Retry...", e)
+                    print(f"({retry_number + 1}) Connection failed. Retry...", e)
                     time.sleep(2)
                     continue
                 else:
@@ -424,16 +425,14 @@ class Client(BinanceClient):
                         symbol=symbol,
                         order_id=buy_order_id
                 )
-                print("Buy order canceled: ", _cancel_result)
-                sys.exit(1)
+                sys.exit(f"Buy order canceled: {_cancel_result}")
 
             if _order["status"] == "FILLED":
                 buy_order = _order
                 print("The buy order has been filled!")
                 break
             elif _order["status"] == "CANCELED":
-                print("The buy order has been canceled (not by the script)!")
-                sys.exit(1)
+                sys.exit("The buy order has been canceled (not by the script)!")
             else:
                 print("The order is not filled yet...")
                 time.sleep(3)
