@@ -7,7 +7,7 @@ from .object_values import (
     LotSizeFilter,
     MarketLotSizeFilter,
 )
-from .tools import _strict_int_validator
+from .tools import strict_integer_validator
 
 
 class Entity(BaseModel):
@@ -37,4 +37,4 @@ class Symbol(Entity):
 
     @validator('price_decimal_precision', 'qty_decimal_precision')
     def enforce_strict_integer_validation(cls, v):
-        return _strict_int_validator(cls, v)
+        return strict_integer_validator(cls, v)

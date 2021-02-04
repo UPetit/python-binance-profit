@@ -17,7 +17,7 @@ def get_formated_price(
     return "{:0.0{}f}".format(amount, precision)
 
 
-def _strict_int_validator(cls, v):
+def strict_integer_validator(cls, v):
     if Decimal(v) != int(v):
         raise ValueError
     return v
