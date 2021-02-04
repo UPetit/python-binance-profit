@@ -39,7 +39,7 @@ class Symbol(BaseModel):
     isSpotTradingAllowed: bool
     ocoAllowed: bool
     price_decimal_precision: PositiveInt
-    qty_decimal_precision: PositiveInt
+    qty_decimal_precision: int
     average_price: Decimal
     filters: Filters
 

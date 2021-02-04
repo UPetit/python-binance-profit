@@ -3,7 +3,6 @@ from datetime import datetime
 from decimal import Decimal
 import sys
 import time
-from BaseException.Exception.OSError import ConnectionError
 
 import numpy as np
 
@@ -349,7 +348,7 @@ class Client(BinanceClient):
             Dict
         """
         try:
-            cancel_result = client.cancel_order(
+            cancel_result = self.cancel_order(
                 symbol=symbol.symbol,
                 orderId=order_id
             )
@@ -401,7 +400,7 @@ class Client(BinanceClient):
             sys.exit("Order type not supported yet.")
 
         # Wait for few seconds (API may not find the order_id instantly after the executing)
-        time.sleep(2)
+        time.sleep(3)
 
         ORDER_IS_NOT_FILLED_YET = True
         while ORDER_IS_NOT_FILLED_YET:
@@ -413,8 +412,8 @@ class Client(BinanceClient):
                         orderId=buy_order_id
                     )
                 except (BinanceAPIException, ConnectionError) as e:
-                    print("Connection failed. Retry...")
-                    time.sleep(1)
+                    print("Connection failed. Retry...", e)
+                    time.sleep(2)
                     continue
                 else:
                     break
@@ -422,7 +421,7 @@ class Client(BinanceClient):
                 print("Binance API is not responding, attempting to cancel the buy order...")
                 # Cancel order
                 _cancel_result = self.cancel_open_order(
-                        symbol=symbol.symbol,
+                        symbol=symbol,
                         order_id=buy_order_id
                 )
                 print("Buy order canceled: ", _cancel_result)
