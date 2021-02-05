@@ -411,7 +411,7 @@ class Client(BinanceClient):
                         symbol=symbol.symbol,
                         orderId=buy_order_id
                     )
-                except (BinanceAPIException, ConnectionError) as e:
+                except (BinanceAPIException, ConnectionError, SocketError) as e:
                     print(f"({str(retry_number+1)}) Connection failed. Retry...", e)
                     time.sleep(2)
                     continue
