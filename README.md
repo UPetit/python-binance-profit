@@ -11,7 +11,6 @@ Even if the scripts are easy to understand, errors exists that why the Issues se
   - Add your Binance API key to a environement variable called `BIN_API_KEY`
   - Add your Binance Secret key to a environement variable called `BIN_SECRET_KEY`
 - Install Python 3.6+ (I'm using [Anaconda](https://www.anaconda.com/) for instance)
----
 ## Installation
 - Clone the repository
 ```
@@ -29,7 +28,6 @@ python3 -m venv venv
 source ./venv/bin/activate
 pip install -r requirements.txt
 ```
----
 ## Use cases
 ### Run a Limit Buy order followed by an OCO Sell order
 #### Script logic
@@ -59,6 +57,13 @@ python execute_orders.py --symbol YOUR_SYMBOL --quantity YOUR_QUANTITY --price Y
 ```
 python execute_orders.py --symbol BTCUSDT --quantity 0.251897 --price 31488.69 --profit 4 --loss 1
 ```
+## Donate
+If you want to support this project financially, you can make a donation to any of the following address:
+- **BTC** address: `198eFqDXEcZXQjo66wGCdgz3VJFFRWEwXg`
+- **ETH** ERC20 address: `0xaa83fcaa0755123572d6543338af3cad2df2fcda`
+- **LTC** address: `Lh5tKw4qEX19pL3KB8kQwHkCPPRU972Aeg`
+- **PayPal**: https://paypal.me/UlyssePETIT
+
 
 Enjoy!
 Don't hesitate to send me feedbacks and report issues :) Thank you!
