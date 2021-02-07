@@ -29,7 +29,6 @@ python3 -m venv venv
 source ./venv/bin/activate
 pip install -r requirements.txt
 ```
----
 ## Use cases
 ### Run a Limit Buy order followed by an OCO Sell order
 #### Script logic
@@ -40,12 +39,13 @@ The OCO order will be sent to the market and the script will return the two rela
 #### Instructions
 1. First, choose the crypto pair you want to trade. We call it the **symbol** (string).
 > Example: If you want to trade BTC with USDT, the symbol will be BTCUSDT (as long as this is an available symbol in Binance).
-2. Then you have to define how much of the base asset you want to buy. We call it the **quantity** (Decimal).
-3. Then you have to define what is the price (for 1 unit of the base asset) you want to buy the quantity defined above. We call it the **price** (Decimal).
+2. For a limit buy order:
+   - You have to define how much of the base asset you want to buy. We call it the **quantity** (Decimal).
+   - Then you have to define what is the price (for 1 unit of the base asset) you want to buy the quantity defined above. We call it the **price** (Decimal).
 > Example: if you trade the **symbol** BTCUSDT, you need to define the BTC (base asset) price in USDT (quote asset) you're willing to pay.
+3. For a market buy order: (Work in progress)
 4. Finally have to define your profit and stoploss percentages to exit the trade (this will be applied to the OCO sell order).
-We call them respectively **profit** (Decimal)
-and **loss** (Decimal).
+We call them respectively **profit** (Decimal) and **loss** (Decimal).
 > If you want to make 2% of profit and put a stoploss a 1%, your profit should be 2 and the loss 1 (as Decimals between 0.0 and 100.0)
 
 ⚠️ Please not that if the quantity and/or price formats are not following Binance rules, your Limit buy order won't be validated and the script will stop before submitting to order to the market.
