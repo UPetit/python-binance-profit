@@ -8,8 +8,8 @@ Even if the scripts are easy to understand, errors exists that why the Issues se
 - Create an API key after logging in to your Binance account https://www.binance.com/en/my/settings/api-management:
   - Check both `Enable Reading` and `Enable Spot & Margin Trading`
   - Save carefully your `API key` and your `Secret key` (⚠️ the last one won't be visible again at your next login)
-  - Add your Binance API key to a environement variable called `BIN_API_KEY`
-  - Add your Binance Secret key to a environement variable called `BIN_SECRET_KEY`
+  - Add your Binance API key to a environement variable called `API_KEY`
+  - Add your Binance Secret key to a environement variable called `SECRET_KEY`
 - Install Python 3.6+ (I'm using [Anaconda](https://www.anaconda.com/) for instance)
 ## Installation
 - Clone the repository
