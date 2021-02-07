@@ -6,7 +6,7 @@ from environs import Env
 from pydantic import ValidationError, BaseModel
 
 from app.client import Client
-from app.object_values import InputArgs
+from app.object_values import MarketInputArgs, LimitInputArgs
 from app.tools import get_formated_price
 
 
@@ -21,18 +21,19 @@ if API_KEY is None or SECRET_KEY is None:
 
 
 def main(
-    input_args: InputArgs
+    input_args: BaseModel
 ) -> None:
 
     client = Client(api_key=API_KEY, api_secret=SECRET_KEY)
     symbol = client.get_symbol(input_args.symbol)
 
-    buy_order_type = "limit"
+    #buy_order_type = "limit"
+    print(f"DEBUG - Buy order type: {input_args.buy_type}")
 
     # Place a market buy order
     buy_order, buy_quantity, buy_price = client.execute_buy_strategy(
         symbol,
-        buy_order_type,
+        input_args.buy_type,
         input_args.quantity,
         input_args.price,
     )
@@ -68,11 +69,11 @@ def main(
 
 def input_validation(
     raw_input_args,
-    input_validator: BaseModel = InputArgs
+    input_validator: BaseModel
 ) -> BaseModel:
 
     try:
-        input_args_validated = InputArgs(**args)
+        input_args_validated = input_validator(**args)
     except ValidationError as e:
         sys.exit(e)
     else:
@@ -88,28 +89,44 @@ if __name__ == "__main__":
         help="define the symbol of the crypto pair to trade"
     )
     parser.add_argument(
-        "--quantity",
+        "--buy_type",
         required=True,
+        choices=["market", "limit"],
+        help="define the type of buy order to execute: limit or market"
+    )
+    parser.add_argument(
+        "--total",
+        required=False,
+        help="define the total amount to spend"
+    )
+    parser.add_argument(
+        "--quantity",
+        required=False,
         help="define the quantity to buy (decimal number)"
     )
     parser.add_argument(
         "--price",
-        required=True,
+        required=False,
         help="define the unit price to spend"
     )
     parser.add_argument(
         "--profit",
-        required=True,
+        required=False,
         help="define the profit to make in percentage between 0 and 100"
     )
     parser.add_argument(
         "--loss",
-        required=True,
+        required=False,
         help="define the stoploss in percentage between 0 and 100"
     )
 
     args = vars(parser.parse_args())
-    input_args_validated = input_validation(args)
+    if args["buy_type"] == "market":
+        input_args_validated = input_validation(args, MarketInputArgs)
+    elif args["buy_type"] == "limit":
+        input_args_validated = input_validation(args, LimitInputArgs)
+    else:
+        sys.exit("The buy type argument is unknown")
 
     main(
         input_args=input_args_validated

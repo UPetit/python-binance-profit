@@ -384,7 +384,7 @@ class Client(BinanceClient):
         print("=> Step 1 - Buy order execution")
 
         if order_type == "limit":
-            print("Order validation in progress...")
+            print("Limit buy order validation in progress...")
             if not self.validate_qty(symbol, quantity):
                 sys.exit("The order qty is not valid.")
 
@@ -398,7 +398,7 @@ class Client(BinanceClient):
             )
 
             if not buy_order_id:
-                sys.exit("Buy order has not been created")
+                sys.exit("Limit buy order has not been created")
         else:
             sys.exit("Order type not supported yet.")
 

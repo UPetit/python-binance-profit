@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from pydantic import BaseModel, condecimal
+from pydantic import BaseModel, condecimal, validator
 
 
 class ObjectValue(BaseModel):
@@ -9,10 +9,19 @@ class ObjectValue(BaseModel):
         allow_mutation = False
 
 
-class InputArgs(ObjectValue):
+class LimitInputArgs(ObjectValue):
     symbol: str
+    buy_type: str
     quantity: condecimal(gt=0)
     price: condecimal(gt=0)
+    profit: condecimal(gt=0, le=100)
+    loss: condecimal(gt=0, le=100)
+
+
+class MarketInputArgs(ObjectValue):
+    symbol: str
+    buy_type: str
+    total: condecimal(gt=0)
     profit: condecimal(gt=0, le=100)
     loss: condecimal(gt=0, le=100)
 
