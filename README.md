@@ -8,8 +8,8 @@ Even if the scripts are easy to understand, errors exists that why the Issues se
 - Create an API key after logging in to your Binance account https://www.binance.com/en/my/settings/api-management:
   - Check both `Enable Reading` and `Enable Spot & Margin Trading`
   - Save carefully your `API key` and your `Secret key` (⚠️ the last one won't be visible again at your next login)
-  - Add your Binance API key to a environement variable called `BIN_API_KEY`
-  - Add your Binance Secret key to a environement variable called `BIN_SECRET_KEY`
+  - Add your Binance API key to a environement variable called `API_KEY`
+  - Add your Binance Secret key to a environement variable called `SECRET_KEY`
 - Install Python 3.6+ (I'm using [Anaconda](https://www.anaconda.com/) for instance)
 ---
 ## Installation
@@ -34,7 +34,7 @@ pip install -r requirements.txt
 ### Run a Limit Buy order followed by an OCO Sell order
 #### Script logic
 The script will check that both the price and the quantity are compliant with Binance rules for the selected symbol.
-If both are validated, the limit buy order will be sent to the market and the script will wait until it's filled.
+If both are validated, the buy order will be sent to the market and the script will wait until it's filled.
 Once it's executed the OCO order will be prepared: the price with profit will be calculated according to the profit percentage that has been provided, same for the stoploss price.
 The OCO order will be sent to the market and the script will return the two related orders and then quit.
 #### Instructions
@@ -53,11 +53,11 @@ and **loss** (Decimal).
 
 5. Run the script using the parameters you've just defined by replacing with your values
 ```
-python execute_orders.py --symbol YOUR_SYMBOL --quantity YOUR_QUANTITY --price YOUR_PRICE --profit YOUR_PROFIT --loss YOUR_LOSS
+python execute_orders.py --symbol YOUR_SYMBOL --buy_type limit --quantity YOUR_QUANTITY --price YOUR_PRICE --profit YOUR_PROFIT --loss YOUR_LOSS
 ```
 *Example: If you want to trade BTC against USDT, buy 0.251897 BTC at 31488.69 USDT (per BTC) and then you want to sell it to make a 4% profit and a potential loss of 1%, you'll execute the script like this:*
 ```
-python execute_orders.py --symbol BTCUSDT --quantity 0.251897 --price 31488.69 --profit 4 --loss 1
+python execute_orders.py --symbol BTCUSDT --buy_type limit --quantity 0.251897 --price 31488.69 --profit 4 --loss 1
 ```
 
 Enjoy!
