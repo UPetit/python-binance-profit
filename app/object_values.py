@@ -45,4 +45,6 @@ class LotSizeFilter(ObjectValue):
 
 
 class MarketLotSizeFilter(ObjectValue):
-    pass
+    min_qty: Decimal
+    max_qty: Decimal
+    step_size: Decimal
