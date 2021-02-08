@@ -30,7 +30,7 @@ source ./venv/bin/activate
 pip install -r requirements.txt
 ```
 ## Use cases
-### Run a Limit Buy order followed by an OCO Sell order
+### Run a Buy order (limit or market) followed by an OCO Sell order
 #### Script logic
 The script will check that both the price and the quantity are compliant with Binance rules for the selected symbol.
 If both are validated, the buy order will be sent to the market and the script will wait until it's filled.
