@@ -17,17 +17,15 @@ env.read_env()
 API_KEY = env.str("API_KEY", None)
 SECRET_KEY = env.str("SECRET_KEY", None)
 if API_KEY is None or SECRET_KEY is None:
-    sys.exit("Neither `API_KEY` nor `SECRET_KEY` environment variables are defined!")
+    sys.exit("Either `API_KEY` or `SECRET_KEY` env. variable is not defined!")
 
 
-def main(
-    input_args: BaseModel
-) -> None:
+def main(input_args: BaseModel) -> None:
 
     client = Client(api_key=API_KEY, api_secret=SECRET_KEY)
     symbol = client.get_symbol(input_args.symbol)
 
-    #buy_order_type = "limit"
+    # Buy_order_type = "limit"
     print(f"DEBUG - Buy order type: {input_args.buy_type}")
 
     # Place a market buy order
@@ -67,10 +65,7 @@ def main(
     print("Limit maker order:", limit_maker_order)
 
 
-def input_validation(
-    raw_input_args,
-    input_validator: BaseModel
-) -> BaseModel:
+def input_validation(raw_input_args, input_validator: BaseModel) -> BaseModel:
 
     try:
         input_args_validated = input_validator(**args)
@@ -128,6 +123,4 @@ if __name__ == "__main__":
     else:
         sys.exit("The buy type argument is unknown")
 
-    main(
-        input_args=input_args_validated
-    )
+    main(input_args=input_args_validated)

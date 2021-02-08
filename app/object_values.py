@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from pydantic import BaseModel, condecimal, validator
+from pydantic import BaseModel, condecimal
 
 
 class ObjectValue(BaseModel):
