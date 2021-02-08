@@ -31,12 +31,25 @@ def main(
     print(f"DEBUG - Buy order type: {input_args.buy_type}")
 
     # Place a market buy order
-    buy_order, buy_quantity, buy_price = client.execute_buy_strategy(
-        symbol,
-        input_args.buy_type,
-        input_args.quantity,
-        input_args.price,
-    )
+    if input_args.buy_type == "limit":
+        buy_order, buy_quantity, buy_price = client.execute_buy_strategy(
+            symbol=symbol,
+            order_type=input_args.buy_type,
+            quantity=input_args.quantity,
+            unit_price=input_args.price,
+            total_quote=Decimal("0.0")
+        )
+    elif input_args.buy_type == "market":
+        buy_order, buy_quantity, buy_price = client.execute_buy_strategy(
+            symbol=symbol,
+            order_type=input_args.buy_type,
+            quantity=Decimal("0.0"),
+            unit_price=Decimal("0.0"),
+            total_quote=input_args.total
+        )
+    else:
+        sys.exit("Buy order type not supported")
+
     print("=========================")
     print("=== Buy order summary ===")
     print(
@@ -63,8 +76,8 @@ def main(
 
     print("=========================")
     print("=== OCO order summary ===")
-    print("Stop loss limit order:", stop_loss_limit_order)
-    print("Limit maker order:", limit_maker_order)
+    print("== Stop loss limit order:", stop_loss_limit_order)
+    print("== Limit maker order:", limit_maker_order)
 
 
 def input_validation(

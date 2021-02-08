@@ -179,7 +179,8 @@ class Client(BinanceClient):
     def validate_qty(
         self,
         symbol: Symbol,
-        quantity: Decimal
+        quantity: Decimal,
+        buy_order_type: str
     ) -> bool:
         """
         Validate the base quantity for against the Lot Size filter:
@@ -187,18 +188,23 @@ class Client(BinanceClient):
         Args:
             symbol (Symbol): Crypto pair
             quantity (Decimal): Quantity to buy/sell in base asset
+            buy_order_type (str): Type of the buy order to validate
         Return
             Bool
         """
-
-        lot_size_filter = symbol.filters.lot_size_filter
-        if quantity < lot_size_filter.min_qty:
+        if buy_order_type == "limit":
+            filter = symbol.filters.lot_size_filter
+        elif buy_order_type == "market":
+            filter = symbol.filters.market_lot_size_filter
+        else:
+            sys.exit("Buy order type not supported")
+        if quantity < filter.min_qty:
             return False
 
-        if quantity > lot_size_filter.max_qty:
+        if quantity > filter.max_qty:
             return False
 
-        if lot_size_filter.step_size:
+        if filter.step_size:
             if round(quantity, symbol.qty_decimal_precision) != quantity:
                 return False
 
@@ -369,6 +375,7 @@ class Client(BinanceClient):
         order_type: str,
         quantity: Decimal,
         unit_price: Decimal,
+        total_quote: Decimal
     ) -> Union[Dict, Decimal, Decimal]:
         """
         Execute the buy strategy
@@ -385,8 +392,8 @@ class Client(BinanceClient):
 
         if order_type == "limit":
             print("Limit buy order validation in progress...")
-            if not self.validate_qty(symbol, quantity):
-                sys.exit("The order qty is not valid.")
+            if not self.validate_qty(symbol, quantity, order_type):
+                sys.exit("The quantity of base asset is not valid.")
 
             if not self.validate_price(symbol, unit_price):
                 sys.exit("The order price is not valid.")
@@ -399,6 +406,18 @@ class Client(BinanceClient):
 
             if not buy_order_id:
                 sys.exit("Limit buy order has not been created")
+        elif order_type == "market":
+            print("Market buy order validation in progress...")
+            if not self.validate_qty(symbol, total_quote, order_type):
+                sys.exit("The quantity of quote asset is not valid.")
+
+            buy_order, buy_order_id = self.create_market_buy_order(
+                symbol,
+                total_quote
+            )
+
+            if not buy_order_id:
+                sys.exit("Market buy order has not been created")
         else:
             sys.exit("Order type not supported yet.")
 
@@ -439,8 +458,13 @@ class Client(BinanceClient):
             else:
                 print("The order is not filled yet...")
                 time.sleep(3)
-
-        buy_price = Decimal(buy_order["price"])
+        
+        if order_type == "limit":
+            buy_price = Decimal(buy_order["price"])
+        elif order_type == "market":
+            buy_price = Decimal(buy_order["cummulativeQuoteQty"])/Decimal(buy_order["executedQty"])
+        else:
+            sys.exit("Buy order type not supported")
         buy_quantity = Decimal(buy_order["executedQty"])
 
         return buy_order, buy_quantity, buy_price
@@ -489,7 +513,6 @@ class Client(BinanceClient):
         )
 
         sell_orders = sell_order["orderReports"]
-        print("sell_orders", sell_orders)
         stop_loss_limit_order = sell_orders[0]
         limit_maker_order = sell_orders[1]
 
