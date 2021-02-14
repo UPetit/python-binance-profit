@@ -1,22 +1,24 @@
 from typing import Union, List, Dict
 from datetime import datetime
 from decimal import Decimal
+
 import sys
 import time
-from errno import ECONNRESET
 
 import numpy as np
-
 from binance.client import Client as BinanceClient
 from binance.exceptions import BinanceAPIException
 from binance.enums import TIME_IN_FORCE_GTC, SIDE_SELL
 
-from .entities import (
-    Symbol,
+
+from .object_values import (
     PriceFilter,
     PercentPriceFilter,
     LotSizeFilter,
     MarketLotSizeFilter,
+)
+from .entities import (
+    Symbol,
     Filters,
 )
 from .tools import get_formated_price
@@ -177,7 +179,8 @@ class Client(BinanceClient):
     def validate_qty(
         self,
         symbol: Symbol,
-        quantity: Decimal
+        quantity: Decimal,
+        buy_order_type: str
     ) -> bool:
         """
         Validate the base quantity for against the Lot Size filter:
@@ -185,18 +188,23 @@ class Client(BinanceClient):
         Args:
             symbol (Symbol): Crypto pair
             quantity (Decimal): Quantity to buy/sell in base asset
+            buy_order_type (str): Type of the buy order to validate
         Return
             Bool
         """
-
-        lot_size_filter = symbol.filters.lot_size_filter
-        if quantity < lot_size_filter.min_qty:
+        if buy_order_type == "limit":
+            filter = symbol.filters.lot_size_filter
+        elif buy_order_type == "market":
+            filter = symbol.filters.market_lot_size_filter
+        else:
+            sys.exit("Buy order type not supported")
+        if quantity < filter.min_qty:
             return False
 
-        if quantity > lot_size_filter.max_qty:
+        if quantity > filter.max_qty:
             return False
 
-        if lot_size_filter.step_size:
+        if filter.step_size:
             if round(quantity, symbol.qty_decimal_precision) != quantity:
                 return False
 
@@ -349,11 +357,11 @@ class Client(BinanceClient):
             Dict
         """
         try:
-            cancel_result = client.cancel_order(
+            cancel_result = self.cancel_order(
                 symbol=symbol.symbol,
                 orderId=order_id
             )
-        
+
         except BinanceAPIException as e:
             print(f"(Code {e.status_code}) {e.message}")
             return {}
@@ -367,6 +375,7 @@ class Client(BinanceClient):
         order_type: str,
         quantity: Decimal,
         unit_price: Decimal,
+        total_quote: Decimal
     ) -> Union[Dict, Decimal, Decimal]:
         """
         Execute the buy strategy
@@ -382,9 +391,9 @@ class Client(BinanceClient):
         print("=> Step 1 - Buy order execution")
 
         if order_type == "limit":
-            print("Order validation in progress...")
-            if not self.validate_qty(symbol, quantity):
-                sys.exit("The order qty is not valid.")
+            print("Limit buy order validation in progress...")
+            if not self.validate_qty(symbol, quantity, order_type):
+                sys.exit("The quantity of base asset is not valid.")
 
             if not self.validate_price(symbol, unit_price):
                 sys.exit("The order price is not valid.")
@@ -396,25 +405,38 @@ class Client(BinanceClient):
             )
 
             if not buy_order_id:
-                sys.exit("Buy order has not been created")
+                sys.exit("Limit buy order has not been created")
+        elif order_type == "market":
+            print("Market buy order validation in progress...")
+            if not self.validate_qty(symbol, total_quote, order_type):
+                sys.exit("The quantity of quote asset is not valid.")
+
+            buy_order, buy_order_id = self.create_market_buy_order(
+                symbol,
+                total_quote
+            )
+
+            if not buy_order_id:
+                sys.exit("Market buy order has not been created")
         else:
             sys.exit("Order type not supported yet.")
 
         # Wait for few seconds (API may not find the order_id instantly after the executing)
-        time.sleep(2)
+        time.sleep(3)
 
+        NB_MAX_ATTEMPTS = 10
         ORDER_IS_NOT_FILLED_YET = True
         while ORDER_IS_NOT_FILLED_YET:
             # Iterate few times if the Binance API is not responding
-            for retry_number in range(3):
+            for retry_number in range(NB_MAX_ATTEMPTS):
                 try:
                     _order = self.get_order(
                         symbol=symbol.symbol,
                         orderId=buy_order_id
                     )
-                except (BinanceAPIException, ECONNRESET) as e:
-                    print("Connection failed. Retry...")
-                    time.sleep(1)
+                except Exception as e:
+                    print(f"({retry_number + 1}) Connection failed. Retry...", e)
+                    time.sleep(2)
                     continue
                 else:
                     break
@@ -422,24 +444,27 @@ class Client(BinanceClient):
                 print("Binance API is not responding, attempting to cancel the buy order...")
                 # Cancel order
                 _cancel_result = self.cancel_open_order(
-                        symbol=symbol.symbol,
+                        symbol=symbol,
                         order_id=buy_order_id
                 )
-                print("Buy order canceled: ", _cancel_result)
-                sys.exit(1)
+                sys.exit(f"Buy order canceled: {_cancel_result}")
 
             if _order["status"] == "FILLED":
                 buy_order = _order
                 print("The buy order has been filled!")
                 break
             elif _order["status"] == "CANCELED":
-                print("The buy order has been canceled (not by the script)!")
-                sys.exit(1)
+                sys.exit("The buy order has been canceled (not by the script)!")
             else:
                 print("The order is not filled yet...")
                 time.sleep(3)
-
-        buy_price = Decimal(buy_order["price"])
+        
+        if order_type == "limit":
+            buy_price = Decimal(buy_order["price"])
+        elif order_type == "market":
+            buy_price = Decimal(buy_order["cummulativeQuoteQty"])/Decimal(buy_order["executedQty"])
+        else:
+            sys.exit("Buy order type not supported")
         buy_quantity = Decimal(buy_order["executedQty"])
 
         return buy_order, buy_quantity, buy_price
@@ -488,7 +513,6 @@ class Client(BinanceClient):
         )
 
         sell_orders = sell_order["orderReports"]
-        print("sell_orders", sell_orders)
         stop_loss_limit_order = sell_orders[0]
         limit_maker_order = sell_orders[1]
 

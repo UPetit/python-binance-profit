@@ -1,58 +1,40 @@
-from pydantic import BaseModel, condecimal, Field, validator, PositiveInt
+from pydantic import BaseModel, Field, validator
 from decimal import Decimal
 
-
-class PriceFilter(BaseModel):
-    min_price: Decimal
-    max_price: Decimal
-    tick_size: Decimal
-
-
-class PercentPriceFilter(BaseModel):
-    mul_up: Decimal
-    mul_down: Decimal
-    avg_price_mins: Decimal
+from .object_values import (
+    PriceFilter,
+    PercentPriceFilter,
+    LotSizeFilter,
+    MarketLotSizeFilter,
+)
+from .tools import strict_integer_validator
 
 
-class LotSizeFilter(BaseModel):
-    min_qty: Decimal
-    max_qty: Decimal
-    step_size: Decimal
+class Entity(BaseModel):
+    class Config:
+        allow_mutation = True
+        validate_assignment = True
 
 
-class MarketLotSizeFilter(LotSizeFilter):
-    pass
-
-
-class Filters(BaseModel):
+class Filters(Entity):
     price_filter: PriceFilter
     percent_price_filter: PercentPriceFilter
     lot_size_filter: LotSizeFilter
     market_lot_size_filter: MarketLotSizeFilter
 
 
-class Symbol(BaseModel):
+class Symbol(Entity):
     symbol: str
     status: str
     baseAsset: str
     quoteAsset: str
     isSpotTradingAllowed: bool
     ocoAllowed: bool
-    price_decimal_precision: PositiveInt
-    qty_decimal_precision: PositiveInt
+    price_decimal_precision: int = Field(..., ge=0)
+    qty_decimal_precision: int = Field(..., ge=0)
     average_price: Decimal
     filters: Filters
 
-
-class InputArgs(BaseModel):
-    symbol: str
-    quantity: condecimal(gt=0)
-    price: condecimal(gt=0)
-    profit: condecimal(gt=0, le=100)
-    loss: condecimal(gt=0, le=100)
-
-
-def _strict_int(cls, v):
-    if Decimal(v) != int(v):
-        raise ValueError
-    return v
+    @validator('price_decimal_precision', 'qty_decimal_precision')
+    def enforce_strict_integer_validation(cls, v):
+        return strict_integer_validator(cls, v)
