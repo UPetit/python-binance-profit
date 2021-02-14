@@ -12,6 +12,8 @@ Even if the scripts are easy to understand, errors exists that why the Issues se
   - Add your Binance API key to a environement variable called `API_KEY`
   - Add your Binance Secret key to a environement variable called `SECRET_KEY`
 - Install Python 3.6+ (I'm using [Anaconda](https://www.anaconda.com/) for instance)
+
+_Note: If you're using Windows, you might need to install [Microsoft Visual C++ 14.0+](https://visualstudio.microsoft.com/visual-cpp-build-tools/)_
 ## Installation
 - Clone the repository
 ```
