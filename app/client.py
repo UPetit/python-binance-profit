@@ -5,7 +5,6 @@ from decimal import Decimal
 import sys
 import time
 
-import numpy as np
 from binance.client import Client as BinanceClient
 from binance.exceptions import BinanceAPIException
 from binance.enums import TIME_IN_FORCE_GTC, SIDE_SELL
@@ -21,19 +20,24 @@ from .entities import (
     Symbol,
     Filters,
 )
-from .tools import get_formated_price
+from .tools import (
+    get_formated_price,
+    datetime_to_iso8601,
+    decimal_precision_from_scientific_notation
+)
 
 MULT_MILLISECONDS_TO_SECONDS = 1000
 
 
-class Client(BinanceClient):
+class Client:
 
     def __init__(
         self,
         api_key: str,
         api_secret: str,
     ) -> None:
-        """ Initialize the Binance client
+        """
+        Initialize the Binance client
         Args:
             api_key (str): api key for binance api client
             api_secret (str): api secret for binance api client
@@ -41,39 +45,54 @@ class Client(BinanceClient):
             None
         """
 
-        super().__init__(api_key=api_key, api_secret=api_secret)
+        self.binance_client = BinanceClient(
+            api_key=api_key,
+            api_secret=api_secret
+        )
 
-        server_time_unix_epoch = self.get_server_time()
-        server_time_iso8601 = datetime.utcfromtimestamp(
-            server_time_unix_epoch["serverTime"]/MULT_MILLISECONDS_TO_SECONDS
-        ).strftime('%Y-%m-%d %H:%M:%SZ')
+        server_time_utc_iso8601 = datetime_to_iso8601(
+            self.get_binance_api_server_time()
+        )
+        print(f"Binance API Time: {server_time_utc_iso8601}")
 
-        print(f"Binance API Time: {server_time_iso8601}")
-
-        is_down = bool(self.get_system_status()["status"])
-        if is_down:
+        if not self.is_binance_api_live():
             sys.exit("Binance API is down")
         print("Binance API is up")
 
+    def get_binance_api_server_time(self) -> datetime:
+        """Retrieve Binance API UTC server time as a datetime."""
+        server_time_unix_epoch = self.binance_client.get_server_time()
+        server_time_utc_datetime = datetime.utcfromtimestamp(
+            server_time_unix_epoch["serverTime"]/MULT_MILLISECONDS_TO_SECONDS
+        )
+        return server_time_utc_datetime
+
+    def is_binance_api_live(self) -> bool:
+        """Get binance api status."""
+        return not bool(self.binance_client.get_system_status()["status"])
+
     def get_symbol(self, symbol_name: str) -> Symbol:
         """
-        Set the information about a symbol
+        Set the information about a symbol.
         Args:
             symbol_name (str): name of the symbol to retrieve
         Return:
             Symbol
         """
-        symbol_info = self.get_symbol_info(symbol_name)
+        symbol_info = self.binance_client.get_symbol_info(symbol_name)
         if not symbol_info:
             sys.exit(f"No info found for the symbol {symbol_name}")
 
         filters = self._get_filters(symbol_info["filters"])
 
-        avg_price = Decimal(
-            super().get_avg_price(symbol=symbol_name)['price']
+        avg_price = self.get_avg_symbol_price(symbol_name)
+
+        price_round = decimal_precision_from_scientific_notation(
+            filters.price_filter.min_price
         )
-        price_round = int(-np.log10(filters.price_filter.min_price))
-        qty_round = int(-np.log10(filters.lot_size_filter.min_qty))
+        qty_round = decimal_precision_from_scientific_notation(
+            filters.lot_size_filter.min_qty
+        )
 
         symbol = Symbol(
             symbol=symbol_info['symbol'],
@@ -100,12 +119,17 @@ class Client(BinanceClient):
         print("OCO orders allowed")
         return symbol
 
+    def get_avg_symbol_price(self, symbol_name: str) -> Decimal:
+        return Decimal(
+            self.binance_client.get_avg_price(symbol=symbol_name)['price']
+        )
+
     def _get_filters(
         self,
         symbol_filters: List[Dict]
     ) -> Filters:
         """
-        Get the filters
+        Get the filters.
         Args:
             symbol_filters (List of Dict): list of filters as dicts
             for a given symbol
@@ -143,38 +167,6 @@ class Client(BinanceClient):
             lot_size_filter=lot_size_filter,
             market_lot_size_filter=market_lot_size_filter,
         )
-
-    def validate_quote_qty(
-        self,
-        symbol: Symbol,
-        quote_quantity: Decimal,
-    ) -> bool:
-        """
-        Validate the quote quantity against the Market Lot Size filter:
-        https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#filters
-        Args:
-            symbol (Symbol): Crypto pair
-            quote_quantity (Decimal): Quantity to spend/receive in quote asset
-        Return
-            Bool
-        """
-        market_lot_size_filter = symbol.filters.market_lot_size_filter
-        if quote_quantity < market_lot_size_filter.min_qty:
-            return False
-
-        if quote_quantity > market_lot_size_filter.max_qty:
-            return False
-
-        if market_lot_size_filter.step_size:
-            if (round(quote_quantity, symbol.qty_decimal_precision) != quote_quantity):
-                return False
-
-        if not isinstance(quote_quantity, float):
-            return False
-
-        print("Quote quantity (market order) is validated")
-        print("Quote quantity:", quote_quantity)
-        return True
 
     def validate_qty(
         self,
@@ -255,7 +247,8 @@ class Client(BinanceClient):
         symbol: Symbol,
         total_quote: Decimal
     ) -> Union[Dict, int]:
-        """ Place a market buy order
+        """
+        Place a market buy order.
         Args:
             symbol (Symbol): Crypto pair
             total_quote (Decimal): Quote total price to pay
@@ -263,7 +256,7 @@ class Client(BinanceClient):
             Dict, Integer
         """
         try:
-            buy_order = self.order_market_buy(
+            buy_order = self.binance_client.order_market_buy(
                 symbol=symbol.symbol,
                 quoteOrderQty=total_quote,
             )
@@ -283,7 +276,8 @@ class Client(BinanceClient):
         base_asset_quantity_to_buy: Decimal,
         quote_unit_price: str,
     ) -> Union[Dict, int]:
-        """ Place a limit buy order
+        """
+        Place a limit buy order.
         Args:
             symbol (Symbol): Crypto pair
             base_quantity (Decimal): Base asset quantity to buy
@@ -292,7 +286,7 @@ class Client(BinanceClient):
             Dict, Integer
         """
         try:
-            buy_order = self.order_limit_buy(
+            buy_order = self.binance_client.order_limit_buy(
                 symbol=symbol.symbol,
                 quantity=base_asset_quantity_to_buy,
                 price=quote_unit_price,
@@ -315,7 +309,7 @@ class Client(BinanceClient):
         sell_price_stop_loss: str,
     ) -> Dict:
         """
-        Place a Sell OCO order
+        Place a Sell OCO order.
         Args:
             symbol (Symbol): Crypto pair
             base_asset_quantity_to_sell (Decimal): Base asset quantity to buy
@@ -325,7 +319,7 @@ class Client(BinanceClient):
             Dict
         """
         try:
-            sell_order = self.create_oco_order(
+            sell_order = self.binance_client.create_oco_order(
                 symbol=symbol.symbol,
                 side=SIDE_SELL,
                 quantity=base_asset_quantity_to_sell,
@@ -349,7 +343,7 @@ class Client(BinanceClient):
         order_id: str
     ) -> Dict:
         """
-        Cancel an open order
+        Cancel an open order.
         Args:
             symbol (Symbol): Crypto pair
             order_id (str): Open order id
@@ -357,7 +351,7 @@ class Client(BinanceClient):
             Dict
         """
         try:
-            cancel_result = self.cancel_order(
+            cancel_result = self.binance_client.cancel_order(
                 symbol=symbol.symbol,
                 orderId=order_id
             )
@@ -378,7 +372,7 @@ class Client(BinanceClient):
         total_quote: Decimal
     ) -> Union[Dict, Decimal, Decimal]:
         """
-        Execute the buy strategy
+        Execute the buy strategy.
         Args:
             symbol (Symbol): Crypto pair
             order_type (str): type of buy order (options: "limit", )
@@ -430,9 +424,9 @@ class Client(BinanceClient):
             # Iterate few times if the Binance API is not responding
             for retry_number in range(NB_MAX_ATTEMPTS):
                 try:
-                    _order = self.get_order(
-                        symbol=symbol.symbol,
-                        orderId=buy_order_id
+                    _order_status = self.get_order_status(
+                        symbol=symbol,
+                        order_id=buy_order_id
                     )
                 except Exception as e:
                     print(f"({retry_number + 1}) Connection failed. Retry...", e)
@@ -444,16 +438,16 @@ class Client(BinanceClient):
                 print("Binance API is not responding, attempting to cancel the buy order...")
                 # Cancel order
                 _cancel_result = self.cancel_open_order(
-                        symbol=symbol,
-                        order_id=buy_order_id
+                    symbol=symbol,
+                    order_id=buy_order_id
                 )
                 sys.exit(f"Buy order canceled: {_cancel_result}")
 
-            if _order["status"] == "FILLED":
-                buy_order = _order
+            if _order_status["status"] == "FILLED":
+                buy_order = _order_status
                 print("The buy order has been filled!")
                 break
-            elif _order["status"] == "CANCELED":
+            elif _order_status["status"] == "CANCELED":
                 sys.exit("The buy order has been canceled (not by the script)!")
             else:
                 print("The order is not filled yet...")
@@ -469,6 +463,17 @@ class Client(BinanceClient):
 
         return buy_order, buy_quantity, buy_price
 
+    def get_order_status(
+        self,
+        symbol: Symbol,
+        order_id: int,
+    ) -> Dict:
+        """Get current status of an existing order."""
+        return self.binance_client.get_order(
+            symbol=symbol.symbol,
+            orderId=order_id
+        )
+
     def execute_sell_strategy(
         self,
         symbol: Symbol,
@@ -477,7 +482,8 @@ class Client(BinanceClient):
         profit: Decimal,
         loss: Decimal,
     ) -> Union[Dict, Dict]:
-        """ Execute the sell strategy
+        """
+        Execute the sell strategy.
         Args:
             symbol (Symbol): Crypto pair
             sell_quantity (Decimal): Quantity to sell (that has been bought previously)
