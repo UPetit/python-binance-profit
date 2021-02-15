@@ -10,7 +10,7 @@ from binance.exceptions import BinanceAPIException
 from binance.enums import TIME_IN_FORCE_GTC, SIDE_SELL
 
 
-from .object_values import (
+from .object_values.filters import (
     PriceFilter,
     PercentPriceFilter,
     LotSizeFilter,
@@ -452,7 +452,7 @@ class Client:
             else:
                 print("The order is not filled yet...")
                 time.sleep(3)
-        
+
         if order_type == "limit":
             buy_price = Decimal(buy_order["price"])
         elif order_type == "market":

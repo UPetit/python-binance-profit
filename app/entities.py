@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, validator
 from decimal import Decimal
 
-from .object_values import (
+from .object_values.filters import (
     PriceFilter,
     PercentPriceFilter,
     LotSizeFilter,

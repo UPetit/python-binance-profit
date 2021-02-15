@@ -6,7 +6,7 @@ from environs import Env
 from pydantic import ValidationError, BaseModel
 
 from app.client import Client
-from app.object_values import MarketInputArgs, LimitInputArgs
+from app.object_values.args import MarketInputArgs, LimitInputArgs
 from app.tools import get_formated_price
 
 
