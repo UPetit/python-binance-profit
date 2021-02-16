@@ -6,12 +6,12 @@ If you want to create Binance account, here's [my referral link](https://www.bin
 ## Disclaimer
 Even if the scripts are easy to understand, errors exists that why the Issues section is important to report any bug that you may find. I recommend to use the [latest release](https://github.com/UPetit/python-binance-profit/releases/latest) because it has been tested multiple times compared to the other branches.
 ## Requirements
+- Python 3.7+
 - Create an API key after logging in to your Binance account https://www.binance.com/en/my/settings/api-management:
   - Check both `Enable Reading` and `Enable Spot & Margin Trading`
   - Save carefully your `API key` and your `Secret key` (⚠️ the last one won't be visible again at your next login)
   - Add your Binance API key to a environement variable called `API_KEY`
   - Add your Binance Secret key to a environement variable called `SECRET_KEY`
-- Install Python 3.6+ (I'm using [Anaconda](https://www.anaconda.com/) for instance)
 
 _Note: If you're using Windows, you might need to install [Microsoft Visual C++ 14.0+](https://visualstudio.microsoft.com/visual-cpp-build-tools/)_
 ## Installation
