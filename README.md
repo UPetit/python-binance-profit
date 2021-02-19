@@ -75,7 +75,7 @@ If you want to support this project financially, you can make a donation to any 
 - **BTC** address: `198eFqDXEcZXQjo66wGCdgz3VJFFRWEwXg`
 - **ETH** ERC20 address: `0xaa83fcaa0755123572d6543338af3cad2df2fcda`
 - **LTC** address: `Lh5tKw4qEX19pL3KB8kQwHkCPPRU972Aeg`
-- **PayPal**: (https://paypal.me/UlyssePETIT)[https://paypal.me/UlyssePETIT]
+- **PayPal**: [https://paypal.me/UlyssePETIT](https://paypal.me/UlyssePETIT)
 ---
 Enjoy!
 Don't hesitate to send me feedbacks and report issues :) Thank you!
