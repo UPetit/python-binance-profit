@@ -82,14 +82,14 @@ def main(input_args: BaseModel) -> None:
     print("== Limit maker order:", limit_maker_order)
 
 
-def input_validation(raw_input_args, input_validator: BaseModel) -> BaseModel:
+def input_validation(raw_input_args, input_parser: BaseModel) -> BaseModel:
 
     try:
-        input_args_validated = input_validator(**args)
+        cleaned_input_args = input_parser(**raw_input_args)
     except ValidationError as e:
         sys.exit(e)
     else:
-        return input_args_validated
+        return cleaned_input_args
 
 
 if __name__ == "__main__":
