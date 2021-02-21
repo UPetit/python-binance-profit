@@ -1,3 +1,5 @@
+from app.object_values.symbol import Symbol
+from app.object_values.orders import LimitOrder, MarketOrder, Order
 import sys
 import argparse
 from decimal import Decimal
@@ -30,44 +32,46 @@ def main(input_args: BaseModel) -> None:
 
     # Place a market buy order
     if input_args.buy_type == "limit":
-        buy_order, buy_quantity, buy_price = client.execute_buy_strategy(
+        buy_order = LimitOrder(
             symbol=symbol,
-            order_type=input_args.buy_type,
-            quantity=input_args.quantity,
-            unit_price=input_args.price,
-            total_quote=Decimal("0.0")
+            side=Order.SideEnum.buy,
+            price=input_args.price,
         )
+
     elif input_args.buy_type == "market":
-        buy_order, buy_quantity, buy_price = client.execute_buy_strategy(
+        buy_order = MarketOrder(
             symbol=symbol,
-            order_type=input_args.buy_type,
-            quantity=Decimal("0.0"),
-            unit_price=Decimal("0.0"),
-            total_quote=input_args.total
+            side=Order.SideEnum.buy,
+            total=input_args.total
         )
     else:
         sys.exit("Buy order type not supported")
 
+    order_in_progress = client.execute_buy_strategy(buy_order)
     print("=========================")
     print("=== Buy order summary ===")
     print(
-        f"=> Buy price: {get_formated_price(buy_price, symbol.price_decimal_precision)} "
+        f"=> Buy price: "
+        f"{get_formated_price(order_in_progress.info.price, symbol.price_decimal_precision)} "
         f"{symbol.quoteAsset}"
     )
     print(
         "=> Total price: "
-        f"{round(Decimal(buy_order['cummulativeQuoteQty']), symbol.price_decimal_precision)} "
+        f"{round(order_in_progress.info.cummulative_quote_quantity, symbol.price_decimal_precision)} "
         f"{symbol.quoteAsset}"
     )
     print(
-        f"=> Buy quantity: {get_formated_price(buy_quantity, symbol.qty_decimal_precision)} "
+        f"=> Buy quantity: {get_formated_price(order_in_progress.info.executed_quantity, symbol.qty_decimal_precision)} "
         f"{symbol.baseAsset}"
     )
 
+    # TODO: Refactor the execute_sell_strategy
+    # execute_buy_strategy should be done
+
     stop_loss_limit_order, limit_maker_order = client.execute_sell_strategy(
-        symbol,
-        buy_quantity,
-        buy_price,
+        buy_order.symbol,
+        order_in_progress.info.executed_quantity,
+        order_in_progress.info.price,
         input_args.profit,
         input_args.loss,
     )

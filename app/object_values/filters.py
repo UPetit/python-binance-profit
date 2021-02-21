@@ -25,3 +25,10 @@ class MarketLotSizeFilter(ObjectValue):
     min_qty: Decimal
     max_qty: Decimal
     step_size: Decimal
+
+
+class Filters(ObjectValue):
+    price_filter: PriceFilter
+    percent_price_filter: PercentPriceFilter
+    lot_size_filter: LotSizeFilter
+    market_lot_size_filter: MarketLotSizeFilter
