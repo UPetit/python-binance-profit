@@ -1,8 +1,6 @@
-from app.object_values.symbol import Symbol
 from app.object_values.orders import LimitOrder, MarketOrder, Order
 import sys
 import argparse
-from decimal import Decimal
 
 from environs import Env
 from pydantic import ValidationError, BaseModel
@@ -65,13 +63,8 @@ def main(input_args: BaseModel) -> None:
         f"{symbol.baseAsset}"
     )
 
-    # TODO: Refactor the execute_sell_strategy
-    # execute_buy_strategy should be done
-
     stop_loss_limit_order, limit_maker_order = client.execute_sell_strategy(
-        buy_order.symbol,
-        order_in_progress.info.executed_quantity,
-        order_in_progress.info.price,
+        order_in_progress,
         input_args.profit,
         input_args.loss,
     )

@@ -1,4 +1,3 @@
-
 from typing import Union, List, Dict
 from datetime import datetime
 from decimal import Decimal
@@ -18,7 +17,13 @@ from .object_values.filters import (
     LotSizeFilter,
     MarketLotSizeFilter,
 )
-from .object_values.orders import Order, LimitOrder, MarketOrder, OrderInfo
+from .object_values.orders import (
+    Order,
+    LimitOrder,
+    MarketOrder,
+    OrderInfo,
+    OCOOrder
+)
 from .object_values.symbol import Symbol
 from .entities import OrderInProgress
 
@@ -178,9 +183,7 @@ class Client:
         Validate the base quantity for against the Lot Size filter:
         https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#filters
         Args:
-            symbol (Symbol): Crypto pair
-            quantity (Decimal): Quantity to buy/sell in base asset
-            buy_order_type (str): Type of the buy order to validate
+            order (Order): Order to be validated
         Return
             Bool
         """
@@ -215,8 +218,7 @@ class Client:
         Validate the price for against the Price and Percent filters:
         https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#filters
         Args:
-            symbol (Symbol): Crypto pair
-            price (Decimal): Price to spend/received for a base asset
+            order (Order): Order to be validated
         Return
             Bool
         """
@@ -254,10 +256,9 @@ class Client:
         """
         Place a market buy order.
         Args:
-            symbol (Symbol): Crypto pair
-            total_quote (Decimal): Quote total price to pay
+            order (MarketOrder): Market order to be executed by Binance
         Return
-            Dict, Integer
+            OrderInProgress
         """
         print("Market buy order validation in progress...")
         if not self.validate_qty(order):
@@ -288,11 +289,9 @@ class Client:
         """
         Place a limit buy order.
         Args:
-            symbol (Symbol): Crypto pair
-            base_quantity (Decimal): Base asset quantity to buy
-            quote_unit_price (str): Quote asset unit price
+            order (LimitOrder): Limit order to be executed by Binance
         Return
-            Dict, Integer
+            OrderInProgress
         """
 
         print("Limit buy order validation in progress...")
@@ -323,30 +322,24 @@ class Client:
 
     def create_sell_oco_order(
         self,
-        symbol: Symbol,
-        base_asset_quantity_to_sell: Decimal,
-        sell_price_profit: str,
-        sell_price_stop_loss: str,
+        order: OCOOrder,
     ) -> Dict:
         """
         Place a Sell OCO order.
         Args:
-            symbol (Symbol): Crypto pair
-            base_asset_quantity_to_sell (Decimal): Base asset quantity to buy
-            sell_price_profit (str): Price to sell
-            sell_price_stop_loss (str): Stoploss price to sell
+            order: OCOOrder
         Return:
             Dict
         """
         try:
             sell_order = self.binance_client.create_oco_order(
-                symbol=symbol.symbol,
-                side=SIDE_SELL,
-                quantity=base_asset_quantity_to_sell,
-                price=sell_price_profit,
-                stopPrice=sell_price_stop_loss,
-                stopLimitPrice=sell_price_stop_loss,
-                stopLimitTimeInForce=TIME_IN_FORCE_GTC
+                symbol=order.symbol.symbol,
+                side=order.side,
+                quantity=order.quantity,
+                price=order.price,
+                stopPrice=order.stop_price,
+                stopLimitPrice=order.stop_limit_price,
+                stopLimitTimeInForce=order.time_in_force
             )
             print("-> The sell oco order has been sent")
 
@@ -364,8 +357,7 @@ class Client:
         """
         Cancel an open order.
         Args:
-            symbol (Symbol): Crypto pair
-            order_id (str): Open order id
+            order_in_progress (OrderInProgress): Order executed by Binance
         Return
             Dict
         """
@@ -389,12 +381,9 @@ class Client:
         """
         Execute the buy strategy.
         Args:
-            symbol (Symbol): Crypto pair
-            order_type (str): type of buy order (options: "limit", )
-            quantity (Decimal): quantity to buy
-            unit_price (Decimal): unitary buy price
+            order (Order): Order to be executed by Binance
         Return:
-            Dict, Decimal, Decimal
+            OrderInProgress
         """
 
         print("=> Step 1 - Buy order execution")
@@ -485,18 +474,14 @@ class Client:
 
     def execute_sell_strategy(
         self,
-        symbol: Symbol,
-        sell_quantity: Decimal,
-        buy_price: Decimal,
+        order_in_progress: OrderInProgress,
         profit: Decimal,
         loss: Decimal,
     ) -> Union[Dict, Dict]:
         """
         Execute the sell strategy.
         Args:
-            symbol (Symbol): Crypto pair
-            sell_quantity (Decimal): Quantity to sell (that has been bought previously)
-            buy_price (Decimal): Total price spent for the previous buy order
+            order_in_progress (OrderInProgress): Order executed by Binance
             profit (Decimal): Percentage of the profit
             loss (Decimal): Percentage of the stoploss
         Return:
@@ -504,28 +489,31 @@ class Client:
         """
         # Place a sell OCO order
         print("=> Step 2 - Sell OCO order execution")
+        bought_price = order_in_progress.info.price
 
         # Calculate the selling price with profit
-        price_profit = buy_price * (100 + profit)/100
+        price_profit = bought_price * (100 + profit)/100
         price_profit_str = get_formated_price(
             price_profit,
-            symbol.price_decimal_precision
+            order_in_progress.order.symbol.price_decimal_precision
         )
         print(f"Selling price (profit): {price_profit_str}")
         # Calculate the stoploss price
-        price_loss = buy_price * (100 - loss)/100
+        price_loss = bought_price * (100 - loss)/100
         price_loss_str = get_formated_price(
             price_loss,
-            symbol.price_decimal_precision
+            order_in_progress.order.symbol.price_decimal_precision
         )
         print(f"Stoploss price: {price_loss_str}")
-
-        sell_order = self.create_sell_oco_order(
-            symbol,
-            sell_quantity,
-            price_profit_str,
-            price_loss_str
+        oco_order = OCOOrder(
+            side=Order.SideEnum.sell,
+            price=bought_price,
+            quantity=order_in_progress.info.executed_quantity,
+            stop_price=price_loss,
+            stop_limit_price=price_loss,
+            time_in_force=TIME_IN_FORCE_GTC
         )
+        sell_order = self.create_sell_oco_order(order=oco_order)
 
         sell_orders = sell_order["orderReports"]
         stop_loss_limit_order = sell_orders[0]

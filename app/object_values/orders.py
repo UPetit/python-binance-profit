@@ -36,6 +36,10 @@ class StopLimitOrder(LimitOrder):
     time_in_force: str
 
 
+class OCOOrder(StopLimitOrder):
+    stop_limit_price: condecimal(gt=0)
+
+
 class OrderInfo:
     class StatusEnum(str, Enum):
         new = 'NEW'
@@ -50,4 +54,3 @@ class OrderInfo:
     price: condecimal(gt=0)
     cummulative_quote_quantity: condecimal(gt=0)
     executed_quantity: condecimal(gt=0)
-    
