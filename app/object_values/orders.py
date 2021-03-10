@@ -40,7 +40,7 @@ class OCOOrder(StopLimitOrder):
     stop_limit_price: condecimal(gt=0)
 
 
-class OrderInfo:
+class OrderInfo(ObjectValue):
     class StatusEnum(str, Enum):
         new = 'NEW'
         partially_filled = 'PARTIALLY_FILLED'
