@@ -463,7 +463,7 @@ class Client:
 
         else:
             sys.exit("Buy order type not supported")
-
+        
         order_info_client = OrderInfo(
             status=order_info_binance["status"],
             price=buy_price,
@@ -508,10 +508,10 @@ class Client:
         oco_order = OCOOrder(
             symbol=order_in_progress.order.symbol,
             side=Order.SideEnum.sell,
-            price=price_profit,
+            price=price_profit_str,
             quantity=order_in_progress.info.executed_quantity,
-            stop_price=price_loss,
-            stop_limit_price=price_loss,
+            stop_price=price_loss_str,
+            stop_limit_price=price_loss_str,
             time_in_force=TIME_IN_FORCE_GTC
         )
         sell_order = self.create_sell_oco_order(order=oco_order)
