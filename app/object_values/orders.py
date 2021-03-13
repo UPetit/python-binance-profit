@@ -1,4 +1,3 @@
-from decimal import Decimal
 from enum import Enum
 from pydantic import condecimal, root_validator
 
@@ -53,5 +52,5 @@ class OrderInfo(ObjectValue):
 
     status: StatusEnum
     price: condecimal(gt=0)
-    cummulative_quote_quantity: Decimal
-    executed_quantity: Decimal
+    cummulative_quote_quantity: condecimal(ge=0)
+    executed_quantity: condecimal(ge=0)
