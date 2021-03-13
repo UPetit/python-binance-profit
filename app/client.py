@@ -506,8 +506,9 @@ class Client:
         )
         print(f"Stoploss price: {price_loss_str}")
         oco_order = OCOOrder(
+            symbol=order_in_progress.order.symbol,
             side=Order.SideEnum.sell,
-            price=bought_price,
+            price=price_profit,
             quantity=order_in_progress.info.executed_quantity,
             stop_price=price_loss,
             stop_limit_price=price_loss,

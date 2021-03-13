@@ -34,6 +34,7 @@ def main(input_args: BaseModel) -> None:
             symbol=symbol,
             side=Order.SideEnum.buy,
             price=input_args.price,
+            quantity=input_args.quantity
         )
 
     elif input_args.buy_type == "market":
