@@ -48,14 +48,14 @@ class LimitOrder(Order):
     price: condecimal(gt=0)
     quantity: condecimal(gt=0)
 
-    @root_validator
+    @root_validator(allow_reuse=True)
     def attribute_validation(cls, values: dict) -> dict:
-        validated_values = cls._validate_price(cls, values)
-        validated_values = cls._validate_qty(cls, values)
+        validated_values = cls._validate_price(values, 'price')
+        validated_values = cls._validate_qty(validated_values)
         return validated_values
 
-    def _validate_price(cls, values: dict):
-        if not (price := values.get('price')):
+    def _validate_price(cls, values: dict, price_attr_name: str):
+        if not (price := values.get(price_attr_name)):
             raise ValueError("Price attribute is required.")
 
         if not (symbol := values.get('symbol')):
@@ -109,9 +109,21 @@ class StopLimitOrder(LimitOrder):
     stop_price: condecimal(gt=0)
     time_in_force: str
 
+    @root_validator(allow_reuse=True)
+    def attribute_validation(cls, values):
+        validated_values = super().attribute_validation(cls, values)
+        validated_values = cls._validate_price(validated_values, 'stop_price')
+        return validated_values
+
 
 class OCOOrder(StopLimitOrder):
     stop_limit_price: condecimal(gt=0)
+
+    @root_validator(allow_reuse=True)
+    def attribute_validation(cls, values):
+        validated_values = super().attribute_validation(cls, values)
+        validated_values = cls._validate_price(validated_values, 'stop_limit_price')
+        return validated_values
 
 
 class OrderInfo(ObjectValue):

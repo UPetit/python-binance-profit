@@ -402,14 +402,20 @@ class Client:
         bought_price = order_in_progress.info.price
 
         # Calculate the selling price with profit
-        price_profit = bought_price * (100 + profit)/100
+        price_profit = round(
+            bought_price * (100 + profit)/100,
+            order_in_progress.order.symbol.price_decimal_precision
+        )
         price_profit_str = get_formated_price(
             price_profit,
             order_in_progress.order.symbol.price_decimal_precision
         )
         print(f"Selling price (profit): {price_profit_str}")
         # Calculate the stoploss price
-        price_loss = bought_price * (100 - loss)/100
+        price_loss = round(
+            bought_price * (100 - loss)/100,
+            order_in_progress.order.symbol.price_decimal_precision
+        )
         price_loss_str = get_formated_price(
             price_loss,
             order_in_progress.order.symbol.price_decimal_precision
