@@ -52,3 +52,17 @@ def decimal_precision_from_scientific_notation(decimal_value: Decimal) -> int:
         None,
         -decimal_value.log10()
     )
+
+
+def is_valid_significant_digits(
+    value: Decimal,
+    max_significant_digits: int
+) -> bool:
+    """
+        Are the significant digits with a lower precision than the accepted limit.
+        >>> is_valid_significant_digits(Decimal(0.001), 3)
+        ... True
+        >>> is_valid_significant_digits(Decimal(0.0011), 3)
+        ... False
+    """
+    return round(value, max_significant_digits) == value
