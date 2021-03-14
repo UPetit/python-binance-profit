@@ -4,7 +4,7 @@ The script allows you to place a buy order and automatically place an [OCO order
 It's using the binance API python wrapper from @sammchardy [python-binance](https://github.com/sammchardy/python-binance).
 If you want to create Binance account, here's [my referral link](https://www.binance.com/en/register?ref=UYUPUS6W): earn 10% commission on the fees from my trades.
 ## Disclaimer
-Even if the scripts are easy to understand, errors exists that why the Issues section is important to report any bug that you may find. I recommend to use the [latest release](https://github.com/UPetit/python-binance-profit/releases/latest) because it has been tested multiple times compared to the other branches.
+Even if the scripts are easy to understand, errors exists that's why the [Issues](https://github.com/UPetit/python-binance-profit/issues) section is important to report any bug that you may find. I recommend to use the [latest release](https://github.com/UPetit/python-binance-profit/releases/latest) because it has been tested multiple times compared to the other branches.
 ## Requirements
 - Python 3.8+, if you don't have it yet, you can install it:
   - Following [official instructions](https://docs.python.org/3/using/index.html)
