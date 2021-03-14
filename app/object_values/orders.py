@@ -49,45 +49,62 @@ class LimitOrder(Order):
     price: condecimal(gt=0)
     quantity: condecimal(gt=0)
 
-    @validator('price')
-    def validate_price(cls, price: Decimal):
-        # Price filter check
-        price_filter = cls.symbol.filters.price_filter
-        percent_price_filter = cls.symbol.filters.percent_price_filter
+    @root_validator
+    def attribute_validation(cls, values: dict) -> dict:
+        validated_values = cls._validate_price(cls, values)
+        validated_values = cls._validate_qty(cls, values)
+        return validated_values
+
+    def _validate_price(cls, values: dict):
+        if not (price := values.get('price')):
+            raise ValueError("price attribute is required")
+
+        if not (symbol := values.get('symbol')):
+            raise ValueError("symbol attribute is required")
+
+        price_filter = symbol.filters.price_filter
+        percent_price_filter = symbol.filters.percent_price_filter
 
         if not price_filter.min_price <= price <= price_filter.max_price:
-            return False
+            raise ValueError("The price is not in valid range")
 
         if price_filter.tick_size and not is_valid_significant_digits(
             price,
-            cls.symbol.price_decimal_precision
+            symbol.price_decimal_precision
         ):
-            return False
+            raise ValueError("The price precision is not valid")
 
-        price_upper_limit = cls.symbol.average_price * percent_price_filter.mul_up
-        price_lower_limit = cls.symbol.average_price * percent_price_filter.mul_down
+        price_upper_limit = symbol.average_price * percent_price_filter.mul_up
+        price_lower_limit = symbol.average_price * percent_price_filter.mul_down
 
         if not price_lower_limit <= price <= price_upper_limit:
-            return False
+            raise ValueError("The price is not valid compared to current avg trades")
 
-        return True
+        return values
 
-    @validator('quantity')
-    def validate_qty(cls, quantity: Decimal):
+    def _validate_qty(cls, values: dict):
         """
             `quantity` checked against the LOT_SIZE_FILTER.
         """
-        filter = cls.symbol.filters.lot_size_filter
+
+        if not (quantity := values.get('quantity')):
+            raise ValueError("quantity attribute is required")
+
+        if not (symbol := values.get('symbol')):
+            raise ValueError("symbol attribute is required")
+
+        filter = symbol.filters.lot_size_filter
         if not filter.min_qty <= quantity <= filter.max_qty:
-            return False
+            ValueError("The quantity is not in valid range")
 
         if filter.step_size and not is_valid_significant_digits(
             quantity,
-            cls.symbol.qty_decimal_precision
+            symbol.qty_decimal_precision
         ):
-            return False
+            raise ValueError("The quantity precision is not valid")
 
-        return True
+        print(values)
+        return values
 
 
 class StopLimitOrder(LimitOrder):

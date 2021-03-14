@@ -65,4 +65,4 @@ def is_valid_significant_digits(
         >>> is_valid_significant_digits(Decimal(0.0011), 3)
         ... False
     """
-    return bool(round(value, max_significant_digits) != value)
+    return round(value, max_significant_digits) == value

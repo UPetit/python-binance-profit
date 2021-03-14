@@ -1,4 +1,4 @@
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Optional
 from datetime import datetime
 from decimal import Decimal
 
@@ -207,7 +207,7 @@ class Client:
     def create_limit_buy_order(
         self,
         order: LimitOrder,
-    ) -> OrderInProgress:
+    ) -> Optional[OrderInProgress]:
         """
         Place a limit buy order.
         Args:
@@ -229,7 +229,7 @@ class Client:
 
         except BinanceAPIException as e:
             print(f"(Code {e.status_code}) {e.message}")
-            return {}, 0
+            return None
 
         else:
             return order_in_progress
@@ -303,9 +303,7 @@ class Client:
         print("=> Step 1 - Buy order execution")
 
         if isinstance(order, LimitOrder):
-            buy_order_in_progress = self.create_limit_buy_order(order)
-
-            if not buy_order_in_progress.id:
+            if not (buy_order_in_progress := self.create_limit_buy_order(order)):
                 sys.exit("Limit buy order has not been created")
 
         elif isinstance(order, MarketOrder):
