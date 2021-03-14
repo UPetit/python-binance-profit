@@ -377,7 +377,7 @@ class Client:
 
         else:
             sys.exit("Buy order type not supported")
-        
+
         order_info_client = OrderInfo(
             status=order_info_binance["status"],
             price=buy_price,
