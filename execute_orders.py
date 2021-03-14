@@ -53,7 +53,7 @@ def main(input_args: BaseModel) -> None:
     )
     print(
         "=> Total price: "
-        f"{round(order_in_progress.info.cummulative_quote_quantity, symbol.price_decimal_precision)} "
+        f"{get_formated_price(order_in_progress.info.cummulative_quote_quantity, symbol.price_decimal_precision)} "
         f"{symbol.quoteAsset}"
     )
     print(
