@@ -54,7 +54,8 @@ class LimitOrder(Order):
         validated_values = cls._validate_qty(validated_values)
         return validated_values
 
-    def _validate_price(cls, values: dict, price_attr_name: str):
+    @staticmethod
+    def _validate_price(values: dict, price_attr_name: str):
         if not (price := values.get(price_attr_name)):
             raise ValueError("Price attribute is required.")
 
@@ -81,7 +82,8 @@ class LimitOrder(Order):
 
         return values
 
-    def _validate_qty(cls, values: dict):
+    @staticmethod
+    def _validate_qty(values: dict):
         """
             `quantity` checked against the LOT_SIZE_FILTER.
         """
