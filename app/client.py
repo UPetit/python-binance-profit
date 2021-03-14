@@ -193,10 +193,10 @@ class Client:
             filter = order.symbol.filters.market_lot_size_filter
         else:
             sys.exit("Buy order type not supported")
-        if order.quantity < filter.min_qty:
+        if order.quantity <= filter.min_qty:
             return False
 
-        if order.quantity > filter.max_qty:
+        if order.quantity >= filter.max_qty:
             return False
 
         if filter.step_size:
@@ -226,10 +226,10 @@ class Client:
         price_filter = order.symbol.filters.price_filter
         percent_price_filter = order.symbol.filters.percent_price_filter
 
-        if order.price < price_filter.min_price:
+        if order.price <= price_filter.min_price:
             return False
 
-        if order.price > price_filter.max_price:
+        if order.price >= price_filter.max_price:
             return False
 
         if price_filter.tick_size:
@@ -239,10 +239,10 @@ class Client:
             ) != order.price:
                 return False
 
-        if order.price > order.symbol.average_price * percent_price_filter.mul_up:
+        if order.price >= order.symbol.average_price * percent_price_filter.mul_up:
             return False
 
-        if order.price < order.symbol.average_price * percent_price_filter.mul_down:
+        if order.price <= order.symbol.average_price * percent_price_filter.mul_down:
             return False
 
         print("Price is validated")
