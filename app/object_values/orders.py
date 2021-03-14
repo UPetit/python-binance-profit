@@ -112,8 +112,8 @@ class StopLimitOrder(LimitOrder):
     time_in_force: str
 
     @root_validator(allow_reuse=True)
-    def attribute_validation(cls, values):
-        validated_values = super().attribute_validation(cls, values)
+    def attribute_validation(cls, values: dict) -> dict:
+        validated_values = super().attribute_validation(values)
         validated_values = cls._validate_price(validated_values, 'stop_price')
         return validated_values
 
@@ -122,8 +122,8 @@ class OCOOrder(StopLimitOrder):
     stop_limit_price: condecimal(gt=0)
 
     @root_validator(allow_reuse=True)
-    def attribute_validation(cls, values):
-        validated_values = super().attribute_validation(cls, values)
+    def attribute_validation(cls, values: dict) -> dict:
+        validated_values = super().attribute_validation(values)
         validated_values = cls._validate_price(validated_values, 'stop_limit_price')
         return validated_values
 
