@@ -6,12 +6,17 @@ If you want to create Binance account, here's [my referral link](https://www.bin
 ## Disclaimer
 Even if the scripts are easy to understand, errors exists that's why the [Issues](https://github.com/UPetit/python-binance-profit/issues) section is important to report any bug that you may find. I recommend to use the [latest release](https://github.com/UPetit/python-binance-profit/releases/latest) because it has been tested multiple times compared to the other branches.
 ## Requirements
+- Python 3.8+, if you don't have it yet, you can install it:
+  - Following [official instructions](https://docs.python.org/3/using/index.html)
+  - With [Anaconda](https://www.anaconda.com/))
+
 - Create an API key after logging in to your Binance account https://www.binance.com/en/my/settings/api-management:
   - Check both `Enable Reading` and `Enable Spot & Margin Trading`
   - Save carefully your `API key` and your `Secret key` (⚠️ the last one won't be visible again at your next login)
   - Add your Binance API key to a environement variable called `API_KEY`
   - Add your Binance Secret key to a environement variable called `SECRET_KEY`
-- Install Python 3.6+ (I'm using [Anaconda](https://www.anaconda.com/) for instance)
+
+_Note: If you're using Windows, you might need to install [Microsoft Visual C++ 14.0+](https://visualstudio.microsoft.com/visual-cpp-build-tools/)_
 ## Installation
 - Clone the repository
 ```
@@ -72,10 +77,9 @@ python execute_orders.py --symbol BTCUSDT --buy_type market --total 100.0 --prof
 ```
 ## Donate
 If you want to support this project financially, you can make a donation to any of the following address:
-- **BTC** address: `198eFqDXEcZXQjo66wGCdgz3VJFFRWEwXg`
-- **ETH** ERC20 address: `0xaa83fcaa0755123572d6543338af3cad2df2fcda`
-- **LTC** address: `Lh5tKw4qEX19pL3KB8kQwHkCPPRU972Aeg`
-- **PayPal**: [https://paypal.me/UlyssePETIT](https://paypal.me/UlyssePETIT)
+- **BTC** address: `bc1qgulv5tm2qz7pjm2g560gk4j33k2zr0a4vv5cpw`
+- **ETH** ERC20 address: `0x11077498b5c67C76F6Eb2789A381A3Cdd26e4c4B`
+- **PayPal**: (https://paypal.me/UlyssePETIT)[https://paypal.me/UlyssePETIT]
 ---
 Enjoy!
 Don't hesitate to send me feedbacks and report issues :) Thank you!

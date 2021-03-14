@@ -1,12 +1,12 @@
+from app.object_values.orders import LimitOrder, MarketOrder, Order
 import sys
 import argparse
-from decimal import Decimal
 
 from environs import Env
 from pydantic import ValidationError, BaseModel
 
 from app.client import Client
-from app.object_values import MarketInputArgs, LimitInputArgs
+from app.object_values.args import MarketInputArgs, LimitInputArgs
 from app.tools import get_formated_price
 
 
@@ -17,59 +17,52 @@ env.read_env()
 API_KEY = env.str("API_KEY", None)
 SECRET_KEY = env.str("SECRET_KEY", None)
 if API_KEY is None or SECRET_KEY is None:
-    sys.exit("Neither `API_KEY` nor `SECRET_KEY` environment variables are defined!")
+    sys.exit("Either `API_KEY` or `SECRET_KEY` env. variable is not defined!")
 
 
-def main(
-    input_args: BaseModel
-) -> None:
+def main(input_args: BaseModel) -> None:
 
     client = Client(api_key=API_KEY, api_secret=SECRET_KEY)
     symbol = client.get_symbol(input_args.symbol)
 
-    #buy_order_type = "limit"
-    print(f"DEBUG - Buy order type: {input_args.buy_type}")
-
     # Place a market buy order
     if input_args.buy_type == "limit":
-        buy_order, buy_quantity, buy_price = client.execute_buy_strategy(
+        buy_order = LimitOrder(
             symbol=symbol,
-            order_type=input_args.buy_type,
-            quantity=input_args.quantity,
-            unit_price=input_args.price,
-            total_quote=Decimal("0.0")
+            side=Order.SideEnum.buy,
+            price=input_args.price,
+            quantity=input_args.quantity
         )
+
     elif input_args.buy_type == "market":
-        buy_order, buy_quantity, buy_price = client.execute_buy_strategy(
+        buy_order = MarketOrder(
             symbol=symbol,
-            order_type=input_args.buy_type,
-            quantity=Decimal("0.0"),
-            unit_price=Decimal("0.0"),
-            total_quote=input_args.total
+            side=Order.SideEnum.buy,
+            total=input_args.total
         )
     else:
         sys.exit("Buy order type not supported")
 
+    order_in_progress = client.execute_buy_strategy(buy_order)
     print("=========================")
     print("=== Buy order summary ===")
     print(
-        f"=> Buy price: {get_formated_price(buy_price, symbol.price_decimal_precision)} "
+        f"=> Buy price: "
+        f"{get_formated_price(order_in_progress.info.price, symbol.price_decimal_precision)} "
         f"{symbol.quoteAsset}"
     )
     print(
         "=> Total price: "
-        f"{round(Decimal(buy_order['cummulativeQuoteQty']), symbol.price_decimal_precision)} "
+        f"{get_formated_price(order_in_progress.info.cummulative_quote_quantity, symbol.price_decimal_precision)} "
         f"{symbol.quoteAsset}"
     )
     print(
-        f"=> Buy quantity: {get_formated_price(buy_quantity, symbol.qty_decimal_precision)} "
+        f"=> Buy quantity: {get_formated_price(order_in_progress.info.executed_quantity, symbol.qty_decimal_precision)} "
         f"{symbol.baseAsset}"
     )
 
     stop_loss_limit_order, limit_maker_order = client.execute_sell_strategy(
-        symbol,
-        buy_quantity,
-        buy_price,
+        order_in_progress,
         input_args.profit,
         input_args.loss,
     )
@@ -80,17 +73,14 @@ def main(
     print("== Limit maker order:", limit_maker_order)
 
 
-def input_validation(
-    raw_input_args,
-    input_validator: BaseModel
-) -> BaseModel:
+def input_validation(raw_input_args, input_parser: BaseModel) -> BaseModel:
 
     try:
-        input_args_validated = input_validator(**args)
+        cleaned_input_args = input_parser(**raw_input_args)
     except ValidationError as e:
         sys.exit(e)
     else:
-        return input_args_validated
+        return cleaned_input_args
 
 
 if __name__ == "__main__":
@@ -141,6 +131,4 @@ if __name__ == "__main__":
     else:
         sys.exit("The buy type argument is unknown")
 
-    main(
-        input_args=input_args_validated
-    )
+    main(input_args=input_args_validated)

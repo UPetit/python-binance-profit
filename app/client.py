@@ -1,39 +1,50 @@
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Optional
 from datetime import datetime
 from decimal import Decimal
 
 import sys
 import time
 
-import numpy as np
 from binance.client import Client as BinanceClient
 from binance.exceptions import BinanceAPIException
-from binance.enums import TIME_IN_FORCE_GTC, SIDE_SELL
+from binance.enums import TIME_IN_FORCE_GTC
 
 
-from .object_values import (
+from .object_values.filters import (
+    Filters,
     PriceFilter,
     PercentPriceFilter,
     LotSizeFilter,
     MarketLotSizeFilter,
 )
-from .entities import (
-    Symbol,
-    Filters,
+from .object_values.orders import (
+    Order,
+    LimitOrder,
+    MarketOrder,
+    OrderInfo,
+    OCOOrder
 )
-from .tools import get_formated_price
+from .object_values.symbol import Symbol
+from .entities import OrderInProgress
+
+from .tools import (
+    get_formated_price,
+    datetime_to_iso8601,
+    decimal_precision_from_scientific_notation
+)
 
 MULT_MILLISECONDS_TO_SECONDS = 1000
 
 
-class Client(BinanceClient):
+class Client:
 
     def __init__(
         self,
         api_key: str,
         api_secret: str,
     ) -> None:
-        """ Initialize the Binance client
+        """
+        Initialize the Binance client
         Args:
             api_key (str): api key for binance api client
             api_secret (str): api secret for binance api client
@@ -41,39 +52,54 @@ class Client(BinanceClient):
             None
         """
 
-        super().__init__(api_key=api_key, api_secret=api_secret)
+        self.binance_client = BinanceClient(
+            api_key=api_key,
+            api_secret=api_secret
+        )
 
-        server_time_unix_epoch = self.get_server_time()
-        server_time_iso8601 = datetime.utcfromtimestamp(
-            server_time_unix_epoch["serverTime"]/MULT_MILLISECONDS_TO_SECONDS
-        ).strftime('%Y-%m-%d %H:%M:%SZ')
+        server_time_utc_iso8601 = datetime_to_iso8601(
+            self.get_binance_api_server_time()
+        )
+        print(f"Binance API Time: {server_time_utc_iso8601}")
 
-        print(f"Binance API Time: {server_time_iso8601}")
-
-        is_down = bool(self.get_system_status()["status"])
-        if is_down:
+        if not self.is_binance_api_live():
             sys.exit("Binance API is down")
         print("Binance API is up")
 
+    def get_binance_api_server_time(self) -> datetime:
+        """Retrieve Binance API UTC server time as a datetime."""
+        server_time_unix_epoch = self.binance_client.get_server_time()
+        server_time_utc_datetime = datetime.utcfromtimestamp(
+            server_time_unix_epoch["serverTime"]/MULT_MILLISECONDS_TO_SECONDS
+        )
+        return server_time_utc_datetime
+
+    def is_binance_api_live(self) -> bool:
+        """Get binance api status."""
+        return not bool(self.binance_client.get_system_status()["status"])
+
     def get_symbol(self, symbol_name: str) -> Symbol:
         """
-        Set the information about a symbol
+        Set the information about a symbol.
         Args:
             symbol_name (str): name of the symbol to retrieve
         Return:
             Symbol
         """
-        symbol_info = self.get_symbol_info(symbol_name)
+        symbol_info = self.binance_client.get_symbol_info(symbol_name)
         if not symbol_info:
             sys.exit(f"No info found for the symbol {symbol_name}")
 
         filters = self._get_filters(symbol_info["filters"])
 
-        avg_price = Decimal(
-            super().get_avg_price(symbol=symbol_name)['price']
+        avg_price = self.get_avg_symbol_price(symbol_name)
+
+        price_round = decimal_precision_from_scientific_notation(
+            filters.price_filter.min_price
         )
-        price_round = int(-np.log10(filters.price_filter.min_price))
-        qty_round = int(-np.log10(filters.lot_size_filter.min_qty))
+        qty_round = decimal_precision_from_scientific_notation(
+            filters.lot_size_filter.min_qty
+        )
 
         symbol = Symbol(
             symbol=symbol_info['symbol'],
@@ -100,12 +126,17 @@ class Client(BinanceClient):
         print("OCO orders allowed")
         return symbol
 
+    def get_avg_symbol_price(self, symbol_name: str) -> Decimal:
+        return Decimal(
+            self.binance_client.get_avg_price(symbol=symbol_name)['price']
+        )
+
     def _get_filters(
         self,
         symbol_filters: List[Dict]
     ) -> Filters:
         """
-        Get the filters
+        Get the filters.
         Args:
             symbol_filters (List of Dict): list of filters as dicts
             for a given symbol
@@ -144,195 +175,85 @@ class Client(BinanceClient):
             market_lot_size_filter=market_lot_size_filter,
         )
 
-    def validate_quote_qty(
-        self,
-        symbol: Symbol,
-        quote_quantity: Decimal,
-    ) -> bool:
-        """
-        Validate the quote quantity against the Market Lot Size filter:
-        https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#filters
-        Args:
-            symbol (Symbol): Crypto pair
-            quote_quantity (Decimal): Quantity to spend/receive in quote asset
-        Return
-            Bool
-        """
-        market_lot_size_filter = symbol.filters.market_lot_size_filter
-        if quote_quantity < market_lot_size_filter.min_qty:
-            return False
-
-        if quote_quantity > market_lot_size_filter.max_qty:
-            return False
-
-        if market_lot_size_filter.step_size:
-            if (round(quote_quantity, symbol.qty_decimal_precision) != quote_quantity):
-                return False
-
-        if not isinstance(quote_quantity, float):
-            return False
-
-        print("Quote quantity (market order) is validated")
-        print("Quote quantity:", quote_quantity)
-        return True
-
-    def validate_qty(
-        self,
-        symbol: Symbol,
-        quantity: Decimal,
-        buy_order_type: str
-    ) -> bool:
-        """
-        Validate the base quantity for against the Lot Size filter:
-        https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#filters
-        Args:
-            symbol (Symbol): Crypto pair
-            quantity (Decimal): Quantity to buy/sell in base asset
-            buy_order_type (str): Type of the buy order to validate
-        Return
-            Bool
-        """
-        if buy_order_type == "limit":
-            filter = symbol.filters.lot_size_filter
-        elif buy_order_type == "market":
-            filter = symbol.filters.market_lot_size_filter
-        else:
-            sys.exit("Buy order type not supported")
-        if quantity < filter.min_qty:
-            return False
-
-        if quantity > filter.max_qty:
-            return False
-
-        if filter.step_size:
-            if round(quantity, symbol.qty_decimal_precision) != quantity:
-                return False
-
-        print("Quantity (limit order) is validated")
-        print("Quantity:", quantity)
-        return True
-
-    def validate_price(
-        self,
-        symbol: Symbol,
-        price: Decimal,
-    ) -> bool:
-        """
-        Validate the price for against the Price and Percent filters:
-        https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#filters
-        Args:
-            symbol (Symbol): Crypto pair
-            price (Decimal): Price to spend/received for a base asset
-        Return
-            Bool
-        """
-        # Price filter check
-        price_filter = symbol.filters.price_filter
-        percent_price_filter = symbol.filters.percent_price_filter
-
-        if price < price_filter.min_price:
-            return False
-
-        if price > price_filter.max_price:
-            return False
-
-        if price_filter.tick_size:
-            if round(price, symbol.price_decimal_precision) != price:
-                return False
-
-        if price > symbol.average_price * percent_price_filter.mul_up:
-            return False
-
-        if price < symbol.average_price * percent_price_filter.mul_down:
-            return False
-
-        print("Price is validated")
-        print("Price: ", price)
-        return True
-
     def create_market_buy_order(
         self,
-        symbol: Symbol,
-        total_quote: Decimal
-    ) -> Union[Dict, int]:
-        """ Place a market buy order
+        order: MarketOrder
+    ) -> Optional[OrderInProgress]:
+        """
+        Place a market buy order.
         Args:
-            symbol (Symbol): Crypto pair
-            total_quote (Decimal): Quote total price to pay
+            order (MarketOrder): Market order to be executed by Binance
         Return
-            Dict, Integer
+            OrderInProgress
         """
         try:
-            buy_order = self.order_market_buy(
-                symbol=symbol.symbol,
-                quoteOrderQty=total_quote,
+            buy_order = self.binance_client.order_market_buy(
+                symbol=order.symbol.symbol,
+                quoteOrderQty=order.total,
             )
-            buy_order_id = buy_order["orderId"]
+            order_in_progress = OrderInProgress(
+                id=buy_order["orderId"],
+                order=order
+            )
             print("The market order has been sent")
 
         except BinanceAPIException as e:
             print(f"(Code {e.status_code}) {e.message}")
-            return {}, 0
+            return None
 
         else:
-            return buy_order, buy_order_id
+            return order_in_progress
 
     def create_limit_buy_order(
         self,
-        symbol: Symbol,
-        base_asset_quantity_to_buy: Decimal,
-        quote_unit_price: str,
-    ) -> Union[Dict, int]:
-        """ Place a limit buy order
+        order: LimitOrder,
+    ) -> Optional[OrderInProgress]:
+        """
+        Place a limit buy order.
         Args:
-            symbol (Symbol): Crypto pair
-            base_quantity (Decimal): Base asset quantity to buy
-            quote_unit_price (str): Quote asset unit price
+            order (LimitOrder): Limit order to be executed by Binance
         Return
-            Dict, Integer
+            OrderInProgress
         """
         try:
-            buy_order = self.order_limit_buy(
-                symbol=symbol.symbol,
-                quantity=base_asset_quantity_to_buy,
-                price=quote_unit_price,
+            buy_order = self.binance_client.order_limit_buy(
+                symbol=order.symbol.symbol,
+                quantity=order.quantity,
+                price=order.price,
             )
-            buy_order_id = buy_order["orderId"]
+            order_in_progress = OrderInProgress(
+                id=buy_order["orderId"],
+                order=order
+            )
             print("-> The limit buy order has been sent")
 
         except BinanceAPIException as e:
             print(f"(Code {e.status_code}) {e.message}")
-            return {}, 0
+            return None
 
         else:
-            return buy_order, buy_order_id
+            return order_in_progress
 
     def create_sell_oco_order(
         self,
-        symbol: Symbol,
-        base_asset_quantity_to_sell: Decimal,
-        sell_price_profit: str,
-        sell_price_stop_loss: str,
+        order: OCOOrder,
     ) -> Dict:
         """
-        Place a Sell OCO order
+        Place a Sell OCO order.
         Args:
-            symbol (Symbol): Crypto pair
-            base_asset_quantity_to_sell (Decimal): Base asset quantity to buy
-            sell_price_profit (str): Price to sell
-            sell_price_stop_loss (str): Stoploss price to sell
+            order: OCOOrder
         Return:
             Dict
         """
         try:
-            sell_order = self.create_oco_order(
-                symbol=symbol.symbol,
-                side=SIDE_SELL,
-                quantity=base_asset_quantity_to_sell,
-                price=sell_price_profit,
-                stopPrice=sell_price_stop_loss,
-                stopLimitPrice=sell_price_stop_loss,
-                stopLimitTimeInForce=TIME_IN_FORCE_GTC
+            sell_order = self.binance_client.create_oco_order(
+                symbol=order.symbol.symbol,
+                side=order.side,
+                quantity=order.quantity,
+                price=order.price,
+                stopPrice=order.stop_price,
+                stopLimitPrice=order.stop_limit_price,
+                stopLimitTimeInForce=order.time_in_force
             )
             print("-> The sell oco order has been sent")
 
@@ -345,21 +266,19 @@ class Client(BinanceClient):
 
     def cancel_open_order(
         self,
-        symbol: Symbol,
-        order_id: str
+        order_in_progress: OrderInProgress,
     ) -> Dict:
         """
-        Cancel an open order
+        Cancel an open order.
         Args:
-            symbol (Symbol): Crypto pair
-            order_id (str): Open order id
+            order_in_progress (OrderInProgress): Order executed by Binance
         Return
             Dict
         """
         try:
-            cancel_result = self.cancel_order(
-                symbol=symbol.symbol,
-                orderId=order_id
+            cancel_result = self.binance_client.cancel_order(
+                symbol=order_in_progress.order.symbol.symbol,
+                orderId=order_in_progress.id
             )
 
         except BinanceAPIException as e:
@@ -371,52 +290,24 @@ class Client(BinanceClient):
 
     def execute_buy_strategy(
         self,
-        symbol: Symbol,
-        order_type: str,
-        quantity: Decimal,
-        unit_price: Decimal,
-        total_quote: Decimal
-    ) -> Union[Dict, Decimal, Decimal]:
+        order: Order,
+    ) -> OrderInProgress:
         """
-        Execute the buy strategy
+        Execute the buy strategy.
         Args:
-            symbol (Symbol): Crypto pair
-            order_type (str): type of buy order (options: "limit", )
-            quantity (Decimal): quantity to buy
-            unit_price (Decimal): unitary buy price
+            order (Order): Order to be executed by Binance
         Return:
-            Dict, Decimal, Decimal
+            OrderInProgress
         """
 
         print("=> Step 1 - Buy order execution")
 
-        if order_type == "limit":
-            print("Limit buy order validation in progress...")
-            if not self.validate_qty(symbol, quantity, order_type):
-                sys.exit("The quantity of base asset is not valid.")
-
-            if not self.validate_price(symbol, unit_price):
-                sys.exit("The order price is not valid.")
-
-            buy_order, buy_order_id = self.create_limit_buy_order(
-                symbol,
-                quantity,
-                unit_price
-            )
-
-            if not buy_order_id:
+        if isinstance(order, LimitOrder):
+            if not (buy_order_in_progress := self.create_limit_buy_order(order)):
                 sys.exit("Limit buy order has not been created")
-        elif order_type == "market":
-            print("Market buy order validation in progress...")
-            if not self.validate_qty(symbol, total_quote, order_type):
-                sys.exit("The quantity of quote asset is not valid.")
 
-            buy_order, buy_order_id = self.create_market_buy_order(
-                symbol,
-                total_quote
-            )
-
-            if not buy_order_id:
+        elif isinstance(order, MarketOrder):
+            if not (buy_order_in_progress := self.create_market_buy_order(order)):
                 sys.exit("Market buy order has not been created")
         else:
             sys.exit("Order type not supported yet.")
@@ -430,9 +321,8 @@ class Client(BinanceClient):
             # Iterate few times if the Binance API is not responding
             for retry_number in range(NB_MAX_ATTEMPTS):
                 try:
-                    _order = self.get_order(
-                        symbol=symbol.symbol,
-                        orderId=buy_order_id
+                    self.update_order_info(
+                        order_in_progress=buy_order_in_progress
                     )
                 except Exception as e:
                     print(f"({retry_number + 1}) Connection failed. Retry...", e)
@@ -444,44 +334,64 @@ class Client(BinanceClient):
                 print("Binance API is not responding, attempting to cancel the buy order...")
                 # Cancel order
                 _cancel_result = self.cancel_open_order(
-                        symbol=symbol,
-                        order_id=buy_order_id
+                    order_in_progress=buy_order_in_progress
                 )
                 sys.exit(f"Buy order canceled: {_cancel_result}")
 
-            if _order["status"] == "FILLED":
-                buy_order = _order
+            if buy_order_in_progress.info.status == "FILLED":
                 print("The buy order has been filled!")
                 break
-            elif _order["status"] == "CANCELED":
+
+            elif buy_order_in_progress.info.status == "CANCELED":
                 sys.exit("The buy order has been canceled (not by the script)!")
+
             else:
                 print("The order is not filled yet...")
                 time.sleep(3)
-        
-        if order_type == "limit":
-            buy_price = Decimal(buy_order["price"])
-        elif order_type == "market":
-            buy_price = Decimal(buy_order["cummulativeQuoteQty"])/Decimal(buy_order["executedQty"])
+
+        return buy_order_in_progress
+
+    def update_order_info(
+        self,
+        order_in_progress: OrderInProgress,
+    ) -> None:
+        """Get current status of an existing order."""
+
+        order_info_binance = self.binance_client.get_order(
+            symbol=order_in_progress.order.symbol.symbol,
+            orderId=order_in_progress.id
+        )
+
+        if isinstance(order_in_progress.order, LimitOrder):
+            buy_price = Decimal(order_info_binance["price"])
+
+        elif isinstance(order_in_progress.order, MarketOrder):
+            buy_price = (
+                Decimal(order_info_binance["cummulativeQuoteQty"])
+                / Decimal(order_info_binance["executedQty"])
+            )
+
         else:
             sys.exit("Buy order type not supported")
-        buy_quantity = Decimal(buy_order["executedQty"])
 
-        return buy_order, buy_quantity, buy_price
+        order_info_client = OrderInfo(
+            status=order_info_binance["status"],
+            price=buy_price,
+            cummulative_quote_quantity=order_info_binance["cummulativeQuoteQty"],
+            executed_quantity=order_info_binance["executedQty"]
+        )
+        order_in_progress.info = order_info_client
 
     def execute_sell_strategy(
         self,
-        symbol: Symbol,
-        sell_quantity: Decimal,
-        buy_price: Decimal,
+        order_in_progress: OrderInProgress,
         profit: Decimal,
         loss: Decimal,
     ) -> Union[Dict, Dict]:
-        """ Execute the sell strategy
+        """
+        Execute the sell strategy.
         Args:
-            symbol (Symbol): Crypto pair
-            sell_quantity (Decimal): Quantity to sell (that has been bought previously)
-            buy_price (Decimal): Total price spent for the previous buy order
+            order_in_progress (OrderInProgress): Order executed by Binance
             profit (Decimal): Percentage of the profit
             loss (Decimal): Percentage of the stoploss
         Return:
@@ -489,28 +399,38 @@ class Client(BinanceClient):
         """
         # Place a sell OCO order
         print("=> Step 2 - Sell OCO order execution")
+        bought_price = order_in_progress.info.price
 
         # Calculate the selling price with profit
-        price_profit = buy_price * (100 + profit)/100
+        price_profit = round(
+            bought_price * (100 + profit)/100,
+            order_in_progress.order.symbol.price_decimal_precision
+        )
         price_profit_str = get_formated_price(
             price_profit,
-            symbol.price_decimal_precision
+            order_in_progress.order.symbol.price_decimal_precision
         )
         print(f"Selling price (profit): {price_profit_str}")
         # Calculate the stoploss price
-        price_loss = buy_price * (100 - loss)/100
+        price_loss = round(
+            bought_price * (100 - loss)/100,
+            order_in_progress.order.symbol.price_decimal_precision
+        )
         price_loss_str = get_formated_price(
             price_loss,
-            symbol.price_decimal_precision
+            order_in_progress.order.symbol.price_decimal_precision
         )
         print(f"Stoploss price: {price_loss_str}")
-
-        sell_order = self.create_sell_oco_order(
-            symbol,
-            sell_quantity,
-            price_profit_str,
-            price_loss_str
+        oco_order = OCOOrder(
+            symbol=order_in_progress.order.symbol,
+            side=Order.SideEnum.sell,
+            price=price_profit,
+            quantity=order_in_progress.info.executed_quantity,
+            stop_price=price_loss,
+            stop_limit_price=price_loss,
+            time_in_force=TIME_IN_FORCE_GTC
         )
+        sell_order = self.create_sell_oco_order(order=oco_order)
 
         sell_orders = sell_order["orderReports"]
         stop_loss_limit_order = sell_orders[0]
