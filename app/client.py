@@ -175,80 +175,6 @@ class Client:
             market_lot_size_filter=market_lot_size_filter,
         )
 
-    def validate_qty(
-        self,
-        order: Order,
-    ) -> bool:
-        """
-        Validate the base quantity for against the Lot Size filter:
-        https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#filters
-        Args:
-            order (Order): Order to be validated
-        Return
-            Bool
-        """
-        if isinstance(order, LimitOrder):
-            filter = order.symbol.filters.lot_size_filter
-        elif isinstance(order, MarketOrder):
-            filter = order.symbol.filters.market_lot_size_filter
-        else:
-            sys.exit("Buy order type not supported")
-        if order.quantity <= filter.min_qty:
-            return False
-
-        if order.quantity >= filter.max_qty:
-            return False
-
-        if filter.step_size:
-            if round(
-                order.quantity,
-                order.symbol.qty_decimal_precision
-            ) != order.quantity:
-                return False
-
-        print("Quantity (limit order) is validated")
-        print("Quantity:", order.quantity)
-        return True
-
-    def validate_price(
-        self,
-        order: Order
-    ) -> bool:
-        """
-        Validate the price for against the Price and Percent filters:
-        https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#filters
-        Args:
-            order (Order): Order to be validated
-        Return
-            Bool
-        """
-        # Price filter check
-        price_filter = order.symbol.filters.price_filter
-        percent_price_filter = order.symbol.filters.percent_price_filter
-
-        if order.price <= price_filter.min_price:
-            return False
-
-        if order.price >= price_filter.max_price:
-            return False
-
-        if price_filter.tick_size:
-            if round(
-                order.price,
-                order.symbol.price_decimal_precision
-            ) != order.price:
-                return False
-
-        if order.price >= order.symbol.average_price * percent_price_filter.mul_up:
-            return False
-
-        if order.price <= order.symbol.average_price * percent_price_filter.mul_down:
-            return False
-
-        print("Price is validated")
-        print("Price: ", order.price)
-        return True
-
     def create_market_buy_order(
         self,
         order: MarketOrder
@@ -260,10 +186,6 @@ class Client:
         Return
             OrderInProgress
         """
-        print("Market buy order validation in progress...")
-        if not self.validate_qty(order):
-            sys.exit("The quantity of quote asset is not valid.")
-
         try:
             buy_order = self.binance_client.order_market_buy(
                 symbol=order.symbol.symbol,
@@ -293,14 +215,6 @@ class Client:
         Return
             OrderInProgress
         """
-
-        print("Limit buy order validation in progress...")
-        if not self.validate_qty(order):
-            sys.exit("The quantity of base asset is not valid.")
-
-        if not self.validate_price(order):
-            sys.exit("The order price is not valid.")
-
         try:
             buy_order = self.binance_client.order_limit_buy(
                 symbol=order.symbol.symbol,
