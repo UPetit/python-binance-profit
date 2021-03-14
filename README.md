@@ -6,7 +6,7 @@ If you want to create Binance account, here's [my referral link](https://www.bin
 ## Disclaimer
 Even if the scripts are easy to understand, errors exists that why the Issues section is important to report any bug that you may find. I recommend to use the [latest release](https://github.com/UPetit/python-binance-profit/releases/latest) because it has been tested multiple times compared to the other branches.
 ## Requirements
-- Python 3.7+, if you don't have it yet, you can install it:
+- Python 3.8+, if you don't have it yet, you can install it:
   - Following [official instructions](https://docs.python.org/3/using/index.html)
   - With [Anaconda](https://www.anaconda.com/))
 
@@ -77,9 +77,8 @@ python execute_orders.py --symbol BTCUSDT --buy_type market --total 100.0 --prof
 ```
 ## Donate
 If you want to support this project financially, you can make a donation to any of the following address:
-- **BTC** address: `198eFqDXEcZXQjo66wGCdgz3VJFFRWEwXg`
-- **ETH** ERC20 address: `0xaa83fcaa0755123572d6543338af3cad2df2fcda`
-- **LTC** address: `Lh5tKw4qEX19pL3KB8kQwHkCPPRU972Aeg`
+- **BTC** address: `bc1qgulv5tm2qz7pjm2g560gk4j33k2zr0a4vv5cpw`
+- **ETH** ERC20 address: `0x11077498b5c67C76F6Eb2789A381A3Cdd26e4c4B`
 - **PayPal**: (https://paypal.me/UlyssePETIT)[https://paypal.me/UlyssePETIT]
 ---
 Enjoy!
