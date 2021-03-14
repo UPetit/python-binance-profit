@@ -25,9 +25,6 @@ def main(input_args: BaseModel) -> None:
     client = Client(api_key=API_KEY, api_secret=SECRET_KEY)
     symbol = client.get_symbol(input_args.symbol)
 
-    # Buy_order_type = "limit"
-    print(f"DEBUG - Buy order type: {input_args.buy_type}")
-
     # Place a market buy order
     if input_args.buy_type == "limit":
         buy_order = LimitOrder(

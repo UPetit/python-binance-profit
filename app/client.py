@@ -275,7 +275,6 @@ class Client:
         Return
             Dict
         """
-        print(type(order_in_progress))
         try:
             cancel_result = self.binance_client.cancel_order(
                 symbol=order_in_progress.order.symbol.symbol,

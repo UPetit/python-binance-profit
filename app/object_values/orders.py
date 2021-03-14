@@ -102,7 +102,6 @@ class LimitOrder(Order):
         ):
             raise ValueError("The quantity precision is not valid.")
 
-        print(values)
         return values
 
 
