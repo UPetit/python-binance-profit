@@ -18,31 +18,30 @@ class Order(ObjectValue):
 
 
 class MarketOrder(Order):
-    # amount: condecimal(gt=0) = None
     total: condecimal(gt=0) = None
 
     @root_validator
-    def enforce_mutally_exclusive_amount_and_total(cls, values):
-        if bool(values['amount']) ^ bool(values['total']):
-            return values
-        raise ValueError
-
-    @validator('total')
-    def validate_total(cls, total: Decimal):
+    def attribute_validation(cls, values: dict) -> dict:
         """
             `total` checked against the MARKET_LOT_SIZE_FILTER.
         """
-        filter = cls.symbol.filters.market_lot_size_filter
+        if not (total := values.get('total')):
+            raise ValueError("Total attribute is required.")
+
+        if not (symbol := values.get('symbol')):
+            raise ValueError("Symbol attribute is required.")
+
+        filter = symbol.filters.market_lot_size_filter
         if not filter.min_qty <= total <= filter.max_qty:
-            return False
+            raise ValueError("The quantity is not in valid range.")
 
         if filter.step_size and not is_valid_significant_digits(
             total,
-            cls.symbol.qty_decimal_precision
+            symbol.qty_decimal_precision
         ):
-            return False
+            raise ValueError("The quantity precision is not valid.")
 
-        return True
+        return values
 
 
 class LimitOrder(Order):
@@ -57,28 +56,28 @@ class LimitOrder(Order):
 
     def _validate_price(cls, values: dict):
         if not (price := values.get('price')):
-            raise ValueError("price attribute is required")
+            raise ValueError("Price attribute is required.")
 
         if not (symbol := values.get('symbol')):
-            raise ValueError("symbol attribute is required")
+            raise ValueError("Symbol attribute is required.")
 
         price_filter = symbol.filters.price_filter
         percent_price_filter = symbol.filters.percent_price_filter
 
         if not price_filter.min_price <= price <= price_filter.max_price:
-            raise ValueError("The price is not in valid range")
+            raise ValueError("The price is not in valid range.")
 
         if price_filter.tick_size and not is_valid_significant_digits(
             price,
             symbol.price_decimal_precision
         ):
-            raise ValueError("The price precision is not valid")
+            raise ValueError("The price precision is not valid.")
 
         price_upper_limit = symbol.average_price * percent_price_filter.mul_up
         price_lower_limit = symbol.average_price * percent_price_filter.mul_down
 
         if not price_lower_limit <= price <= price_upper_limit:
-            raise ValueError("The price is not valid compared to current avg trades")
+            raise ValueError("The price is not valid compared to current avg trades.")
 
         return values
 
@@ -88,20 +87,20 @@ class LimitOrder(Order):
         """
 
         if not (quantity := values.get('quantity')):
-            raise ValueError("quantity attribute is required")
+            raise ValueError("Quantity attribute is required.")
 
         if not (symbol := values.get('symbol')):
-            raise ValueError("symbol attribute is required")
+            raise ValueError("Symbol attribute is required.")
 
         filter = symbol.filters.lot_size_filter
         if not filter.min_qty <= quantity <= filter.max_qty:
-            ValueError("The quantity is not in valid range")
+            ValueError("The quantity is not in valid range.")
 
         if filter.step_size and not is_valid_significant_digits(
             quantity,
             symbol.qty_decimal_precision
         ):
-            raise ValueError("The quantity precision is not valid")
+            raise ValueError("The quantity precision is not valid.")
 
         print(values)
         return values

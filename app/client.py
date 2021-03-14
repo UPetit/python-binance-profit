@@ -178,7 +178,7 @@ class Client:
     def create_market_buy_order(
         self,
         order: MarketOrder
-    ) -> OrderInProgress:
+    ) -> Optional[OrderInProgress]:
         """
         Place a market buy order.
         Args:
@@ -199,7 +199,7 @@ class Client:
 
         except BinanceAPIException as e:
             print(f"(Code {e.status_code}) {e.message}")
-            return {}, 0
+            return None
 
         else:
             return order_in_progress
@@ -275,6 +275,7 @@ class Client:
         Return
             Dict
         """
+        print(type(order_in_progress))
         try:
             cancel_result = self.binance_client.cancel_order(
                 symbol=order_in_progress.order.symbol.symbol,
@@ -307,9 +308,7 @@ class Client:
                 sys.exit("Limit buy order has not been created")
 
         elif isinstance(order, MarketOrder):
-            buy_order_in_progress = self.create_market_buy_order(order)
-
-            if not buy_order_in_progress.id:
+            if not (buy_order_in_progress := self.create_market_buy_order(order)):
                 sys.exit("Market buy order has not been created")
         else:
             sys.exit("Order type not supported yet.")
