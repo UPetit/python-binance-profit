@@ -427,7 +427,7 @@ class Client:
             price=price_profit,
             quantity=order_in_progress.info.executed_quantity,
             stop_price=price_loss,
-            stop_limit_price=price_loss,
+            stop_limit_price=price_loss*999/1000,
             time_in_force=TIME_IN_FORCE_GTC
         )
         sell_order = self.create_sell_oco_order(order=oco_order)
