@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import sys
 import time
+import math
 
 from binance.client import Client as BinanceClient
 from binance.exceptions import BinanceAPIException
@@ -35,6 +36,19 @@ from .tools import (
 
 MULT_MILLISECONDS_TO_SECONDS = 1000
 
+def round_decimals_down(number:float, decimals:int=2):
+    """
+    Returns a value rounded down to a specific number of decimal places.
+    """
+    if not isinstance(decimals, int):
+        raise TypeError("decimal places must be an integer")
+    elif decimals < 0:
+        raise ValueError("decimal places has to be 0 or more")
+    elif decimals == 0:
+        return math.floor(number)
+
+    factor = 10 ** decimals
+    return math.floor(number * factor) / factor
 
 class Client:
 
@@ -421,13 +435,15 @@ class Client:
             order_in_progress.order.symbol.price_decimal_precision
         )
         print(f"Stoploss price: {price_loss_str}")
+        dec_percision=order_in_progress.order.symbol.price_decimal_precision
+        
         oco_order = OCOOrder(
             symbol=order_in_progress.order.symbol,
-            side=Order.SideEnum.sell,
-            price=price_profit,
+            side='SELL',
+            price=round_decimals_down(price_profit,dec_percision),
             quantity=order_in_progress.info.executed_quantity,
-            stop_price=price_loss,
-            stop_limit_price=price_loss,
+            stop_price=round_decimals_down(price_loss,dec_percision),
+            stop_limit_price=round_decimals_down((price_loss*999/1000),dec_percision),
             time_in_force=TIME_IN_FORCE_GTC
         )
         sell_order = self.create_sell_oco_order(order=oco_order)
